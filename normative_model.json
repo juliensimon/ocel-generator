@@ -1,0 +1,58 @@
+{
+  "name": "sequential",
+  "description": "Linear chain: Research → Analyze → Summarize",
+  "steps": [
+    {
+      "id": "research",
+      "name": "Research",
+      "agent_role": "researcher",
+      "model": "gpt-4o",
+      "tools": [
+        "web_search",
+        "file_reader"
+      ],
+      "is_start": true,
+      "is_end": false,
+      "parallel_group": null,
+      "expected_llm_calls": 2,
+      "expected_tool_calls": 3
+    },
+    {
+      "id": "analyze",
+      "name": "Analyze",
+      "agent_role": "analyst",
+      "model": "gpt-4o",
+      "tools": [
+        "calculator",
+        "code_interpreter"
+      ],
+      "is_start": false,
+      "is_end": false,
+      "parallel_group": null,
+      "expected_llm_calls": 2,
+      "expected_tool_calls": 2
+    },
+    {
+      "id": "summarize",
+      "name": "Summarize",
+      "agent_role": "summarizer",
+      "model": "claude-3-5-sonnet",
+      "tools": [],
+      "is_start": false,
+      "is_end": true,
+      "parallel_group": null,
+      "expected_llm_calls": 1,
+      "expected_tool_calls": 0
+    }
+  ],
+  "edges": [
+    {
+      "source": "research",
+      "target": "analyze"
+    },
+    {
+      "source": "analyze",
+      "target": "summarize"
+    }
+  ]
+}
