@@ -1,10 +1,16 @@
 """End-to-end integration tests: engine → export → validate → manifest."""
 
+from pathlib import Path
+from unittest.mock import MagicMock
 
+from ocelgen.enrichment.enricher import enrich_log
 from ocelgen.export.manifest import build_manifest
 from ocelgen.export.normative import template_to_dict
 from ocelgen.export.ocel_json import ocel_log_to_dict, write_ocel_json
 from ocelgen.generation.engine import PATTERN_REGISTRY, generate
+from ocelgen.scenarios.registry import SCENARIO_REGISTRY, get_scenario
+from ocelgen.upload.flatten import flatten_log
+from ocelgen.upload.hf_upload import prepare_upload_files
 from ocelgen.validation.schema import validate_ocel_dict, validate_ocel_file
 
 
@@ -136,3 +142,101 @@ class TestNormativeModel:
             model = template_to_dict(result.template)
             assert model["name"] == name
             assert len(model["steps"]) > 0
+
+
+class TestEnrichmentPipeline:
+    """End-to-end: generate -> enrich (mocked) -> flatten -> prepare files."""
+
+    def _mock_client(self) -> MagicMock:
+        client = MagicMock()
+        client.generate.return_value = {
+            "reasoning": "Analyzing the request to determine the best approach.",
+            "llm_calls": [
+                {"prompt": "Analyze this issue", "completion": "Based on my analysis..."},
+                {"prompt": "Deep dive into findings", "completion": "The root cause is..."},
+            ],
+            "tool_calls": [
+                {"input": {"query": "relevant data"}, "output": {"results": ["item1", "item2"]}},
+                {"input": {"file": "config.yaml"}, "output": {"content": "key: value"}},
+                {"input": {"expr": "1+1"}, "output": {"result": 2}},
+            ],
+            "output_to_next_agent": "Here is my analysis summary for the next agent.",
+        }
+        return client
+
+    def test_full_pipeline_sequential(self, tmp_path: Path) -> None:
+        scenario = get_scenario("customer-support-triage")
+        result = generate("sequential", num_runs=3, noise_rate=0.2, seed=scenario.seed)
+
+        enrich_log(result.log, scenario, client=self._mock_client())
+
+        # Verify enrichment happened
+        llm_objs = [o for o in result.log.objects if o.type == "llm_call"]
+        enriched = [o for o in llm_objs if any(a.name == "prompt" and a.value for a in o.attributes)]
+        assert len(enriched) > 0
+
+        # Flatten
+        rows = flatten_log(result.log, domain=scenario.name)
+        assert len(rows) == len(result.log.events)
+
+        # Some rows should have prompt content
+        rows_with_prompt = [r for r in rows if r.get("prompt")]
+        assert len(rows_with_prompt) > 0
+
+        # Prepare files
+        files = prepare_upload_files(
+            rows=rows,
+            log=result.log,
+            template=result.template,
+            result=result,
+            scenario=scenario,
+            namespace="test",
+            output_dir=tmp_path,
+            seed=scenario.seed,
+        )
+        assert len(files) == 5
+        assert (tmp_path / "data" / "train.parquet").exists()
+        assert (tmp_path / "README.md").exists()
+
+    def test_full_pipeline_supervisor(self, tmp_path: Path) -> None:
+        scenario = get_scenario("code-review-pipeline")
+        result = generate("supervisor", num_runs=3, noise_rate=0.2, seed=scenario.seed)
+
+        enrich_log(result.log, scenario, client=self._mock_client())
+
+        rows = flatten_log(result.log, domain=scenario.name)
+        assert len(rows) == len(result.log.events)
+
+        files = prepare_upload_files(
+            rows=rows, log=result.log, template=result.template,
+            result=result, scenario=scenario, namespace="test",
+            output_dir=tmp_path, seed=scenario.seed,
+        )
+        assert len(files) == 5
+
+    def test_full_pipeline_parallel(self, tmp_path: Path) -> None:
+        scenario = get_scenario("market-research")
+        result = generate("parallel", num_runs=3, noise_rate=0.2, seed=scenario.seed)
+
+        enrich_log(result.log, scenario, client=self._mock_client())
+
+        rows = flatten_log(result.log, domain=scenario.name)
+        assert len(rows) == len(result.log.events)
+
+        files = prepare_upload_files(
+            rows=rows, log=result.log, template=result.template,
+            result=result, scenario=scenario, namespace="test",
+            output_dir=tmp_path, seed=scenario.seed,
+        )
+        assert len(files) == 5
+
+    def test_all_10_domains_generate_without_error(self) -> None:
+        """Smoke test: every domain can generate and enrich (mocked)."""
+        client = self._mock_client()
+        for name, scenario in SCENARIO_REGISTRY.items():
+            result = generate(
+                scenario.pattern, num_runs=2, noise_rate=scenario.noise, seed=scenario.seed,
+            )
+            enrich_log(result.log, scenario, client=client)
+            rows = flatten_log(result.log, domain=name)
+            assert len(rows) > 0, f"Domain {name} produced no rows"
