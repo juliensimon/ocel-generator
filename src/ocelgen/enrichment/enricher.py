@@ -273,7 +273,10 @@ def _get_object(log: OcelLog, obj_id: str):
     return None
 
 
-def _patch_attribute(obj, name: str, value: str) -> None:
+def _patch_attribute(obj, name: str, value) -> None:
+    # Coerce non-string values (LLM may return dicts/lists)
+    if not isinstance(value, str):
+        value = json.dumps(value) if value is not None else ""
     for attr in obj.attributes:
         if attr.name == name:
             attr.value = value

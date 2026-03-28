@@ -39,11 +39,19 @@ class EnrichmentResponse:
         if expected_tool_calls is not None:
             tool_calls = tool_calls[:expected_tool_calls]
 
+        # Coerce fields to expected types (LLM may return dicts instead of strings)
+        reasoning = raw.get("reasoning", "")
+        if not isinstance(reasoning, str):
+            reasoning = json.dumps(reasoning)
+        output = raw.get("output_to_next_agent", "")
+        if not isinstance(output, str):
+            output = json.dumps(output)
+
         return cls(
-            reasoning=raw.get("reasoning", ""),
+            reasoning=reasoning,
             llm_calls=llm_calls,
             tool_calls=tool_calls,
-            output_to_next_agent=raw.get("output_to_next_agent", ""),
+            output_to_next_agent=output,
         )
 
 
