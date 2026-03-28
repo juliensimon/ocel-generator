@@ -64,6 +64,32 @@ class LLMClient:
         self.model = model
         self._client = OpenAI(api_key=api_key, base_url=base_url)
 
+    def generate_queries(self, seed_queries: list[str], domain_description: str, count: int) -> list[str]:
+        """Generate diverse user queries by expanding from seed examples.
+
+        Calls the LLM once with all seed queries and asks it to produce
+        *count* unique, diverse queries in the same style.
+        """
+        system_prompt = (
+            "You are a query generator. Given a domain description and example queries, "
+            "generate new, unique, diverse queries in the same style. "
+            "Respond with valid JSON only: {\"queries\": [\"query1\", \"query2\", ...]}"
+        )
+        seed_list = "\n".join(f"- {q}" for q in seed_queries)
+        user_prompt = (
+            f"Domain: {domain_description}\n\n"
+            f"Example queries:\n{seed_list}\n\n"
+            f"Generate exactly {count} unique, diverse queries for this domain. "
+            f"Each query should be different from the examples and from each other."
+        )
+        result = self.generate(system_prompt, user_prompt)
+        queries = result.get("queries", [])
+        # Ensure we return exactly count queries, padding with seeds if needed
+        if len(queries) < count:
+            for i in range(count - len(queries)):
+                queries.append(seed_queries[i % len(seed_queries)])
+        return queries[:count]
+
     def generate(self, system_prompt: str, user_prompt: str) -> dict:
         """Call the LLM and parse the JSON response.
 

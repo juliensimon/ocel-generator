@@ -14,6 +14,7 @@ def build_enrichment_prompt(
     expected_llm_calls: int,
     expected_tool_calls: int,
     previous_output: str | None,
+    deviation_context: str | None = None,
 ) -> tuple[str, str]:
     """Build the system and user prompts for a single enrichment call.
 
@@ -42,11 +43,16 @@ def build_enrichment_prompt(
     if previous_output:
         previous_section = f"Previous agent output:\n{previous_output}\n"
 
+    deviation_section = ""
+    if deviation_context:
+        deviation_section = f"\n{deviation_context}\n"
+
     user_prompt = (
         f"You are acting as the **{agent_role}** agent.\n"
         f"Persona: {agent_persona}\n\n"
         f"User query: {user_query}\n\n"
         f"{previous_section}"
+        f"{deviation_section}"
         f"{tools_section}\n\n"
         f"Generate exactly {expected_llm_calls} LLM call(s) and {expected_tool_calls} tool call(s).\n\n"
         f"Respond as JSON with this exact structure:\n"

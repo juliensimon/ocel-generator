@@ -210,6 +210,7 @@ class TestEnrichLog:
 
         mock_client = MagicMock()
         mock_client.generate.return_value = mock_response
+        mock_client.generate_queries.return_value = ["Test query one", "Test query two", "Test query three"]
 
         enrich_log(result.log, scenario, client=mock_client)
 
@@ -238,6 +239,7 @@ class TestEnrichLog:
 
         mock_client = MagicMock()
         mock_client.generate.return_value = mock_response
+        mock_client.generate_queries.return_value = ["Test query one", "Test query two", "Test query three"]
 
         enrich_log(result.log, scenario, client=mock_client)
 
@@ -256,9 +258,135 @@ class TestEnrichLog:
             "tool_calls": [{"input": {}, "output": {}}, {"input": {}, "output": {}}, {"input": {}, "output": {}}],
             "output_to_next_agent": "done",
         }
+        mock_client.generate_queries.return_value = ["Test query one", "Test query two", "Test query three"]
 
         enrich_log(result.log, scenario, client=mock_client)
 
         run_obj = next(o for o in result.log.objects if o.id == "run-0000")
         query_attr = next(a for a in run_obj.attributes if a.name == "user_query")
         assert query_attr.value == "Test query one"
+
+
+class TestTokenEstimation:
+    def test_estimate_tokens(self) -> None:
+        from ocelgen.enrichment.enricher import _estimate_tokens
+        # ~1.3 tokens per word: 6 words -> ~7-8 tokens
+        result = _estimate_tokens("hello world this is a test")
+        assert 5 <= result <= 15
+        # Longer text: 10 words -> ~13 tokens
+        result2 = _estimate_tokens("the quick brown fox jumps over the lazy dog today")
+        assert 10 <= result2 <= 20
+        assert _estimate_tokens("") == 0
+
+
+class TestDeviationDetection:
+    def test_detect_deviations_in_deviant_run(self) -> None:
+        from ocelgen.enrichment.enricher import _detect_run_deviations
+        result = generate("sequential", num_runs=20, noise_rate=1.0, seed=42)
+        # With 100% noise, all runs should have deviations
+        deviations = _detect_run_deviations(result.log, "run-0000")
+        assert len(deviations) > 0
+
+    def test_detect_no_deviations_in_conformant_run(self) -> None:
+        from ocelgen.enrichment.enricher import _detect_run_deviations
+        result = generate("sequential", num_runs=1, noise_rate=0.0, seed=42)
+        deviations = _detect_run_deviations(result.log, "run-0000")
+        assert len(deviations) == 0
+
+
+class TestDeviationAwarePrompt:
+    def test_prompt_includes_deviation_context(self) -> None:
+        _, user = build_enrichment_prompt(
+            domain_description="Test",
+            pattern_description="Test",
+            agent_role="researcher",
+            agent_persona="Test persona",
+            user_query="Test query",
+            tool_names=[],
+            tool_descriptions={},
+            expected_llm_calls=1,
+            expected_tool_calls=0,
+            previous_output=None,
+            deviation_context="This step used the WRONG TOOL",
+        )
+        assert "WRONG TOOL" in user
+
+    def test_prompt_without_deviation(self) -> None:
+        _, user = build_enrichment_prompt(
+            domain_description="Test",
+            pattern_description="Test",
+            agent_role="researcher",
+            agent_persona="Test persona",
+            user_query="Test query",
+            tool_names=[],
+            tool_descriptions={},
+            expected_llm_calls=1,
+            expected_tool_calls=0,
+            previous_output=None,
+            deviation_context=None,
+        )
+        assert "deviation" not in user.lower() or "WRONG" not in user
+
+
+class TestRealisticTimestamps:
+    def test_timestamps_are_realistic_after_enrichment(self) -> None:
+        result = generate("sequential", num_runs=1, noise_rate=0.0, seed=42)
+        scenario = _make_test_scenario()
+
+        mock_client = MagicMock()
+        mock_client.generate.return_value = {
+            "reasoning": "Investigating the issue thoroughly.",
+            "llm_calls": [
+                {"prompt": "Detailed prompt text here", "completion": "A reasonably long completion with multiple sentences about the topic."},
+                {"prompt": "Another prompt", "completion": "Another completion."},
+            ],
+            "tool_calls": [
+                {"input": {"q": "test"}, "output": {"r": "result data"}},
+                {"input": {"q": "test2"}, "output": {"r": "result2"}},
+                {"input": {"q": "test3"}, "output": {"r": "result3"}},
+            ],
+            "output_to_next_agent": "Summary of findings.",
+        }
+        mock_client.generate_queries.return_value = ["Test query one", "Test query two", "Test query three"]
+
+        enrich_log(result.log, scenario, client=mock_client)
+
+        # Check that run spans more than 1 second total
+        run_events = [e for e in result.log.events
+                      if any(a.name == "run_id" and a.value == "run-0000" for a in e.attributes)]
+        if len(run_events) >= 2:
+            first = run_events[0].time
+            last = run_events[-1].time
+            duration_s = (last - first).total_seconds()
+            assert duration_s > 1.0, f"Run duration {duration_s}s is unrealistically short"
+
+
+class TestQueryExpansion:
+    def test_generate_queries_called_when_needed(self) -> None:
+        # Scenario with 3 queries but 5 runs
+        scenario = DomainScenario(
+            name="test",
+            description="Test domain",
+            pattern="sequential",
+            runs=5,
+            noise=0.0,
+            seed=42,
+            user_queries=["q1", "q2", "q3"],
+            agent_personas={"researcher": "R", "analyst": "A", "summarizer": "S"},
+            tool_descriptions={},
+        )
+        result = generate("sequential", num_runs=5, noise_rate=0.0, seed=42)
+
+        mock_client = MagicMock()
+        mock_client.generate.return_value = {
+            "reasoning": "ok",
+            "llm_calls": [{"prompt": "p", "completion": "c"}, {"prompt": "p", "completion": "c"}],
+            "tool_calls": [{"input": {}, "output": {}}, {"input": {}, "output": {}}, {"input": {}, "output": {}}],
+            "output_to_next_agent": "done",
+        }
+        mock_client.generate_queries.return_value = ["q1", "q2", "q3", "q4", "q5"]
+
+        enrich_log(result.log, scenario, client=mock_client)
+
+        # generate_queries should have been called
+        mock_client.generate_queries.assert_called_once()
