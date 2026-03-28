@@ -58,3 +58,56 @@ class TestDatasetCard:
         )
         assert "load_dataset" in card
         assert "testuser/agent-traces-test-domain" in card
+
+
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+from ocelgen.upload.hf_upload import prepare_upload_files, build_repo_name
+
+
+class TestBuildRepoName:
+    def test_basic(self) -> None:
+        assert build_repo_name("juliensimon", "customer-support-triage") == (
+            "juliensimon/agent-traces-customer-support-triage"
+        )
+
+
+class TestPrepareUploadFiles:
+    def test_creates_parquet_and_ocel_files(self, tmp_path: Path) -> None:
+        from ocelgen.generation.engine import generate
+        from ocelgen.upload.flatten import flatten_log
+        from ocelgen.scenarios.domain import DomainScenario
+
+        scenario = DomainScenario(
+            name="test-domain",
+            description="A test domain for unit tests",
+            pattern="sequential",
+            runs=10,
+            noise=0.2,
+            seed=42,
+            user_queries=["query one"],
+            agent_personas={"researcher": "A researcher"},
+            tool_descriptions={"web_search": "Search"},
+        )
+
+        result = generate("sequential", num_runs=2, noise_rate=0.0, seed=42)
+        rows = flatten_log(result.log, domain="test")
+
+        files = prepare_upload_files(
+            rows=rows,
+            log=result.log,
+            template=result.template,
+            result=result,
+            scenario=scenario,
+            namespace="testuser",
+            output_dir=tmp_path,
+            seed=42,
+        )
+
+        assert (tmp_path / "data" / "train.parquet").exists()
+        assert (tmp_path / "ocel" / "output.jsonocel").exists()
+        assert (tmp_path / "ocel" / "normative_model.json").exists()
+        assert (tmp_path / "ocel" / "manifest.json").exists()
+        assert (tmp_path / "README.md").exists()
+        assert len(files) == 5
