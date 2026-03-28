@@ -129,22 +129,28 @@ OBJECT_ATTR_DEFS: dict[str, list[OcelAttributeDefinition]] = {
         OcelAttributeDefinition(name="input_tokens", type="integer"),
         OcelAttributeDefinition(name="output_tokens", type="integer"),
         OcelAttributeDefinition(name="cost_usd", type="float"),
+        OcelAttributeDefinition(name="reasoning", type="string"),
     ],
     "tool_call": [
         OcelAttributeDefinition(name="tool_name", type="string"),
         OcelAttributeDefinition(name="tool_kind", type="string"),
         OcelAttributeDefinition(name="status", type="string"),
         OcelAttributeDefinition(name="duration_ms", type="integer"),
+        OcelAttributeDefinition(name="tool_input", type="string"),
+        OcelAttributeDefinition(name="tool_output", type="string"),
     ],
     "llm_call": [
         OcelAttributeDefinition(name="model", type="string"),
         OcelAttributeDefinition(name="input_tokens", type="integer"),
         OcelAttributeDefinition(name="output_tokens", type="integer"),
         OcelAttributeDefinition(name="latency_ms", type="integer"),
+        OcelAttributeDefinition(name="prompt", type="string"),
+        OcelAttributeDefinition(name="completion", type="string"),
     ],
     "message": [
         OcelAttributeDefinition(name="role", type="string"),
         OcelAttributeDefinition(name="content_length", type="integer"),
+        OcelAttributeDefinition(name="content", type="string"),
     ],
     "task": [
         OcelAttributeDefinition(name="description", type="string"),
