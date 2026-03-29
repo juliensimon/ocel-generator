@@ -346,6 +346,10 @@ SCENARIO_REGISTRY: dict[str, DomainScenario] = {
 }
 
 
-def get_scenario(name: str) -> DomainScenario:
+def get_scenario(
+    name: str,
+    registry: dict[str, DomainScenario] | None = None,
+) -> DomainScenario:
     """Look up a domain scenario by name. Raises KeyError if not found."""
-    return SCENARIO_REGISTRY[name]
+    reg = registry if registry is not None else SCENARIO_REGISTRY
+    return reg[name]
