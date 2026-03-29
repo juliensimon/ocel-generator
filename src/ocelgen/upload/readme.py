@@ -1,75 +1,77 @@
-"""Generate Hugging Face dataset card (README.md) for agent trace datasets."""
+"""Generate Hugging Face dataset card for the unified agent traces dataset."""
 
 from __future__ import annotations
 
 from ocelgen.scenarios.domain import DomainScenario
 
+GITHUB_URL = "https://github.com/juliensimon/ocel-generator"
+
 
 def generate_dataset_card(
-    scenario: DomainScenario,
+    scenarios: list[DomainScenario],
     namespace: str,
-    num_events: int,
-    num_objects: int,
+    domain_stats: dict[str, dict],
 ) -> str:
-    """Generate a HF dataset card markdown string."""
-    repo_name = f"{namespace}/agent-traces-{scenario.name}"
+    """Generate a unified HF dataset card for all domains.
+
+    Args:
+        scenarios: List of all domain scenarios.
+        namespace: HF namespace (e.g. "juliensimon").
+        domain_stats: {domain_name: {"num_events": int, "num_objects": int}}
+    """
+    repo_name = f"{namespace}/open-agent-traces"
+    total_events = sum(s["num_events"] for s in domain_stats.values())
+    total_objects = sum(s["num_objects"] for s in domain_stats.values())
+    total_runs = sum(s.runs for s in scenarios)
+
+    # Build configs YAML
+    configs_yaml = ""
+    for s in scenarios:
+        stats = domain_stats.get(s.name, {})
+        configs_yaml += f"""  - config_name: {s.name}
+    data_files:
+      - split: train
+        path: data/{s.name}/train.parquet
+"""
+
+    # Build domain table
+    domain_rows = ""
+    for s in scenarios:
+        stats = domain_stats.get(s.name, {})
+        events = stats.get("num_events", 0)
+        domain_rows += f"| `{s.name}` | {s.pattern} | {s.runs} | {s.noise:.0%} | {events:,} | {s.description} |\n"
+
+    # Build per-domain details
+    domain_details = ""
+    for s in scenarios:
+        agent_rows = ""
+        for role, persona in s.agent_personas.items():
+            agent_rows += f"  | `{role}` | {persona} |\n"
+        tool_rows = ""
+        for tool, desc in s.tool_descriptions.items():
+            tool_rows += f"  | `{tool}` | {desc} |\n"
+
+        domain_details += f"""
+<details>
+<summary><strong>{s.name}</strong> ({s.pattern})</summary>
+
+  {s.description}
+
+  | Agent | Persona |
+  |-------|---------|
+{agent_rows}
+  | Tool | Description |
+  |------|-------------|
+{tool_rows}
+  Example queries:
+{chr(10).join(f'  - "{q}"' for q in s.user_queries[:5])}
+
+</details>
+"""
 
     return f"""---
-dataset_info:
-  features:
-    - name: event_id
-      dtype: string
-    - name: event_type
-      dtype: string
-    - name: timestamp
-      dtype: string
-    - name: run_id
-      dtype: string
-    - name: sequence_number
-      dtype: int64
-    - name: is_deviation
-      dtype: bool
-    - name: deviation_type
-      dtype: string
-    - name: step_id
-      dtype: string
-    - name: agent_role
-      dtype: string
-    - name: model_name
-      dtype: string
-    - name: prompt
-      dtype: string
-    - name: completion
-      dtype: string
-    - name: tool_name
-      dtype: string
-    - name: tool_input
-      dtype: string
-    - name: tool_output
-      dtype: string
-    - name: message_content
-      dtype: string
-    - name: reasoning
-      dtype: string
-    - name: input_tokens
-      dtype: int64
-    - name: output_tokens
-      dtype: int64
-    - name: latency_ms
-      dtype: int64
-    - name: cost_usd
-      dtype: float64
-    - name: is_conformant
-      dtype: bool
-    - name: pattern
-      dtype: string
-    - name: domain
-      dtype: string
-    - name: user_query
-      dtype: string
-  splits:
-    - name: train
-      num_examples: {num_events}
+configs:
+{configs_yaml}
 license: mit
 tags:
   - agent-traces
@@ -77,76 +79,171 @@ tags:
   - multi-agent
   - process-mining
   - synthetic
+  - llm-agents
+  - conformance-checking
+size_categories:
+  - 10K<n<100K
 ---
 
-# Agent Traces: {scenario.name}
+# Open Agent Traces
 
-Synthetic multi-agent workflow traces with LLM-enriched content for the **{scenario.name}** domain.
-
-## Description
-
-{scenario.description}
-
-- **Workflow pattern:** {scenario.pattern}
-- **Runs:** {scenario.runs}
-- **Noise rate:** {scenario.noise} (fraction of runs with injected deviations)
-- **Events:** {num_events}
-- **Objects:** {num_objects}
-- **Seed:** {scenario.seed} (reproducible)
-
-## Schema
-
-Each row represents one event in the OCEL 2.0 trace:
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `event_id` | string | Unique event identifier |
-| `event_type` | string | Event type (e.g. `agent_invoked`, `llm_request_sent`) |
-| `timestamp` | string | ISO 8601 timestamp |
-| `run_id` | string | Which workflow run this event belongs to |
-| `sequence_number` | int | Order within the run |
-| `is_deviation` | bool | Whether this event is part of an injected deviation |
-| `deviation_type` | string | Type of deviation (if any) |
-| `agent_role` | string | Role of the agent (resolved from relationship) |
-| `prompt` | string | LLM prompt text (enriched) |
-| `completion` | string | LLM completion text (enriched) |
-| `tool_name` | string | Tool that was called |
-| `tool_input` | string | Tool input as JSON (enriched) |
-| `tool_output` | string | Tool output as JSON (enriched) |
-| `reasoning` | string | Agent chain-of-thought reasoning (enriched) |
-| `is_conformant` | bool | Whether the run follows the normative workflow |
-
-## Usage
+**{total_events:,} synthetic multi-agent workflow events** across **{total_runs} runs** in **10 domains**, with LLM-enriched content: prompts, completions, tool I/O, agent reasoning, and deviation labels.
 
 ```python
 from datasets import load_dataset
 
-ds = load_dataset("{repo_name}")
-print(ds["train"][0])
+# Load a specific domain
+ds = load_dataset("{repo_name}", "incident-response")
 
-# Filter to just agent invocations
-agent_events = ds["train"].filter(lambda x: x["event_type"] == "agent_invoked")
-
-# Get all deviant runs
-deviant = ds["train"].filter(lambda x: not x["is_conformant"])
+# Browse a run
+for event in ds["train"]:
+    if event["run_id"] == "run-0000":
+        print(f"{{event['event_type']:25s}} | {{event['agent_role']:12s}} | {{event['reasoning'][:60] if event['reasoning'] else ''}}")
 ```
 
-## Files
+## What is this dataset?
 
-- `data/train.parquet` — Flat tabular format (one row per event)
-- `ocel/output.jsonocel` — Native OCEL 2.0 JSON format
-- `ocel/normative_model.json` — Expected workflow template
-- `ocel/manifest.json` — Generation metadata and deviation ground truth
+This dataset provides **realistic agent execution traces** for multi-agent AI workflows. Each trace includes:
 
-## Generation
+- **Agent reasoning** — chain-of-thought for every agent step
+- **LLM prompts and completions** — realistic request/response pairs
+- **Tool calls with inputs and outputs** — structured JSON for each tool invocation
+- **Inter-agent messages** — handoff content between workflow steps
+- **Deviation labels** — ground-truth annotations marking conformant vs anomalous behavior
 
-Generated with [ocelgen](https://github.com/juliensimon/ocel-generator) using two-pass architecture:
-1. Structural OCEL 2.0 trace generation with configurable deviation injection
-2. LLM enrichment via OpenRouter for realistic prompts, completions, and tool I/O
+The traces follow the **[OCEL 2.0](https://www.ocel-standard.org/) standard** (Object-Centric Event Logs), making them compatible with process mining tools and conformance checking algorithms.
 
-Part of the [{namespace}/open-agent-traces](https://huggingface.co/collections/{namespace}/open-agent-traces) collection.
+## Domains
+
+10 configurations, each representing a different domain and workflow pattern:
+
+| Config | Pattern | Runs | Noise | Events | Description |
+|--------|---------|------|-------|--------|-------------|
+{domain_rows}
+
+**Workflow patterns:**
+- **sequential** — linear chain of agents (A → B → C)
+- **supervisor** — central agent delegates to specialist workers
+- **parallel** — fan-out to concurrent agents, then aggregate
+
+{domain_details}
+
+## Schema
+
+Each row is one event in the OCEL 2.0 trace:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `event_id` | string | Unique event identifier |
+| `event_type` | string | `run_started`, `agent_invoked`, `llm_request_sent`, `llm_response_received`, `tool_called`, `tool_returned`, `message_sent`, `routing_decided`, `agent_completed`, `run_completed`, `error_occurred`, `retry_started` |
+| `timestamp` | string | ISO 8601 with realistic inter-event durations (seconds-scale) |
+| `run_id` | string | Workflow run identifier |
+| `sequence_number` | int | Monotonic order within the run |
+| `is_deviation` | bool | Whether this event is part of an injected deviation |
+| `deviation_type` | string | `skipped_activity`, `inserted_activity`, `wrong_resource`, `swapped_order`, `wrong_tool`, `repeated_activity`, `timeout`, `wrong_routing`, `missing_handoff`, `extra_llm_call` |
+| `step_id` | string | Workflow step identifier |
+| `agent_role` | string | Agent role (e.g. `researcher`, `supervisor`, `coder`) |
+| `model_name` | string | LLM model (e.g. `gpt-4o`, `claude-3-5-sonnet`) |
+| `prompt` | string | LLM prompt text (on `llm_response_received` events) |
+| `completion` | string | LLM completion text |
+| `tool_name` | string | Name of the tool called |
+| `tool_input` | string | Tool input as JSON |
+| `tool_output` | string | Tool output as JSON |
+| `message_content` | string | Inter-agent handoff message |
+| `reasoning` | string | Agent chain-of-thought reasoning |
+| `input_tokens` | int | Input token count (calibrated to content) |
+| `output_tokens` | int | Output token count (calibrated to content) |
+| `latency_ms` | int | LLM or tool call latency in ms |
+| `cost_usd` | float | Estimated invocation cost |
+| `is_conformant` | bool | Whether the run follows the expected workflow |
+| `pattern` | string | `sequential`, `supervisor`, or `parallel` |
+| `domain` | string | Domain name (same as config name) |
+| `user_query` | string | User request that initiated the run |
+
+## Usage examples
+
+```python
+from datasets import load_dataset
+
+# Load one domain
+ds = load_dataset("{repo_name}", "customer-support-triage")
+
+# Get all LLM completions
+completions = ds["train"].filter(lambda x: x["event_type"] == "llm_response_received")
+for row in completions:
+    print(f"Prompt: {{row['prompt'][:100]}}...")
+    print(f"Completion: {{row['completion'][:100]}}...")
+
+# Analyze deviations
+deviant = ds["train"].filter(lambda x: x["is_deviation"])
+print(f"Deviation types: {{set(e for e in deviant['deviation_type'] if e)}}")
+
+# Cross-domain comparison
+for domain in ["customer-support-triage", "incident-response", "code-review-pipeline"]:
+    ds = load_dataset("{repo_name}", domain)
+    agents = set(row["agent_role"] for row in ds["train"] if row["agent_role"])
+    print(f"{{domain}}: {{agents}}")
+```
+
+## Use cases
+
+- **Agent observability** — build dashboards that visualize multi-agent workflow execution
+- **Process mining** — apply OCEL 2.0 conformance checking to detect workflow anomalies
+- **Anomaly detection** — train classifiers on conformant vs deviant agent traces
+- **Agent evaluation** — benchmark reasoning quality across domains and patterns
+- **Trace analysis** — study information flow between agents in different architectures
+
+## Files per domain
+
+| Path | Format | Description |
+|------|--------|-------------|
+| `data/{{domain}}/train.parquet` | Parquet | Flat tabular (one row per event) |
+| `ocel/{{domain}}/output.jsonocel` | OCEL 2.0 JSON | Native object-centric event log |
+| `ocel/{{domain}}/normative_model.json` | JSON | Expected workflow template |
+| `ocel/{{domain}}/manifest.json` | JSON | Generation metadata + deviation ground truth |
+
+## How it was built
+
+Generated with **[ocelgen]({GITHUB_URL})** — a two-pass architecture:
+
+1. **Structural generation** — OCEL 2.0 traces with configurable workflow patterns, deviation injection (10 types), and deterministic seeding
+2. **LLM enrichment** — each agent step enriched via [OpenRouter](https://openrouter.ai) with domain-specific prompts; outputs chain across steps for coherence
+
+Quality measures:
+- Token counts calibrated to actual content length (1.3x word-to-token ratio)
+- Realistic timestamps (seconds-scale LLM latencies)
+- 50 unique queries per domain (LLM-expanded from seed set)
+- Deviation-aware content (deviant steps reflect failures in their reasoning)
+- Parallel aggregator coherence (aggregator sees all workers' outputs)
+
+## Citation
+
+```bibtex
+@misc{{open-agent-traces-2026,
+  title={{Open Agent Traces: Synthetic Multi-Agent Workflow Datasets}},
+  author={{Julien Simon}},
+  year={{2026}},
+  publisher={{Hugging Face}},
+  url={{https://huggingface.co/datasets/{repo_name}}}
+}}
+```
 
 ## License
 
-MIT
+MIT — source code at [{GITHUB_URL}]({GITHUB_URL})
 """
+
+
+# Keep single-domain version for backward compat with tests
+def generate_single_domain_card(
+    scenario: DomainScenario,
+    namespace: str,
+    num_events: int,
+    num_objects: int,
+) -> str:
+    """Generate a dataset card for a single domain (used in tests)."""
+    return generate_dataset_card(
+        scenarios=[scenario],
+        namespace=namespace,
+        domain_stats={scenario.name: {"num_events": num_events, "num_objects": num_objects}},
+    )

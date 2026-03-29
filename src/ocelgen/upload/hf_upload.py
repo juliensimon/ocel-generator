@@ -1,4 +1,4 @@
-"""Upload agent trace datasets to Hugging Face Hub."""
+"""Upload agent trace datasets to Hugging Face Hub as a single multi-config dataset."""
 
 from __future__ import annotations
 
@@ -16,14 +16,70 @@ from ocelgen.generation.engine import GenerationResult
 from ocelgen.models.ocel import OcelLog
 from ocelgen.models.workflow import WorkflowTemplate
 from ocelgen.scenarios.domain import DomainScenario
-from ocelgen.upload.readme import generate_dataset_card
 
 
+def build_repo_id(namespace: str) -> str:
+    """Build the HF repo ID for the unified dataset."""
+    return f"{namespace}/open-agent-traces"
+
+
+# Keep old name for backward compatibility with tests
 def build_repo_name(namespace: str, domain_name: str) -> str:
-    """Build the HF repo name for a domain."""
+    """Build repo name (deprecated — use build_repo_id for unified repo)."""
     return f"{namespace}/agent-traces-{domain_name}"
 
 
+def prepare_domain_files(
+    rows: list[dict],
+    log: OcelLog,
+    template: WorkflowTemplate,
+    result: GenerationResult,
+    scenario: DomainScenario,
+    output_dir: Path,
+    seed: int | None = None,
+) -> list[Path]:
+    """Write files for a single domain config into the unified dataset structure.
+
+    Layout:
+      output_dir/data/{domain}/train.parquet
+      output_dir/ocel/{domain}/output.jsonocel
+      output_dir/ocel/{domain}/normative_model.json
+      output_dir/ocel/{domain}/manifest.json
+    """
+    domain = scenario.name
+    files: list[Path] = []
+
+    # Parquet — HF auto-detects configs from data/{config_name}/ dirs
+    data_dir = output_dir / "data" / domain
+    data_dir.mkdir(parents=True, exist_ok=True)
+    parquet_path = data_dir / "train.parquet"
+    table = pa.Table.from_pylist(rows)
+    pq.write_table(table, parquet_path)
+    files.append(parquet_path)
+
+    # OCEL files per domain
+    ocel_dir = output_dir / "ocel" / domain
+    ocel_dir.mkdir(parents=True, exist_ok=True)
+
+    ocel_path = ocel_dir / "output.jsonocel"
+    with open(ocel_path, "w", encoding="utf-8") as f:
+        json.dump(ocel_log_to_dict(log), f, indent=2, ensure_ascii=False)
+    files.append(ocel_path)
+
+    normative_path = ocel_dir / "normative_model.json"
+    with open(normative_path, "w", encoding="utf-8") as f:
+        json.dump(template_to_dict(template), f, indent=2, ensure_ascii=False)
+    files.append(normative_path)
+
+    manifest_path = ocel_dir / "manifest.json"
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(build_manifest(result, seed=seed), f, indent=2, ensure_ascii=False)
+    files.append(manifest_path)
+
+    return files
+
+
+# Keep old function for backward compat with existing tests
 def prepare_upload_files(
     rows: list[dict],
     log: OcelLog,
@@ -34,10 +90,9 @@ def prepare_upload_files(
     output_dir: Path,
     seed: int | None = None,
 ) -> list[Path]:
-    """Write all files to output_dir, ready for upload. Returns list of file paths."""
+    """Write all files to output_dir (legacy per-domain layout). Returns list of file paths."""
     files: list[Path] = []
 
-    # Parquet
     data_dir = output_dir / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     parquet_path = data_dir / "train.parquet"
@@ -45,7 +100,6 @@ def prepare_upload_files(
     pq.write_table(table, parquet_path)
     files.append(parquet_path)
 
-    # OCEL files
     ocel_dir = output_dir / "ocel"
     ocel_dir.mkdir(parents=True, exist_ok=True)
 
@@ -64,13 +118,12 @@ def prepare_upload_files(
         json.dump(build_manifest(result, seed=seed), f, indent=2, ensure_ascii=False)
     files.append(manifest_path)
 
-    # README
+    from ocelgen.upload.readme import generate_dataset_card
     readme_path = output_dir / "README.md"
     card = generate_dataset_card(
-        scenario=scenario,
+        scenarios=[scenario],
         namespace=namespace,
-        num_events=len(rows),
-        num_objects=len(log.objects),
+        domain_stats={scenario.name: {"num_events": len(rows), "num_objects": len(log.objects)}},
     )
     with open(readme_path, "w", encoding="utf-8") as f:
         f.write(card)
@@ -79,14 +132,13 @@ def prepare_upload_files(
     return files
 
 
-def upload_to_hub(
+def upload_unified_dataset(
     output_dir: Path,
     namespace: str,
-    domain_name: str,
 ) -> str:
-    """Upload prepared files to HF Hub. Returns the repo URL."""
+    """Upload the unified multi-config dataset to HF Hub. Returns the repo URL."""
     api = HfApi()
-    repo_id = build_repo_name(namespace, domain_name)
+    repo_id = build_repo_id(namespace)
 
     api.create_repo(repo_id, repo_type="dataset", exist_ok=True)
     api.upload_folder(
@@ -95,6 +147,24 @@ def upload_to_hub(
         repo_type="dataset",
     )
 
+    return f"https://huggingface.co/datasets/{repo_id}"
+
+
+# Keep old function for backward compat
+def upload_to_hub(
+    output_dir: Path,
+    namespace: str,
+    domain_name: str,
+) -> str:
+    """Upload prepared files to HF Hub (legacy per-domain). Returns the repo URL."""
+    api = HfApi()
+    repo_id = build_repo_name(namespace, domain_name)
+    api.create_repo(repo_id, repo_type="dataset", exist_ok=True)
+    api.upload_folder(
+        folder_path=str(output_dir),
+        repo_id=repo_id,
+        repo_type="dataset",
+    )
     return f"https://huggingface.co/datasets/{repo_id}"
 
 
