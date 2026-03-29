@@ -1,139 +1,133 @@
-# ocel-generator
+# ocelgen — Synthetic Agent Traces Dataset Generator
 
-A Python CLI tool for generating synthetic [OCEL 2.0](https://www.ocel-standard.org/) event logs that simulate LangChain multi-agent workflow executions. Designed for testing process mining and conformance checking algorithms.
+Generate realistic, LLM-enriched multi-agent workflow trace datasets in [OCEL 2.0](https://www.ocel-standard.org/) format. Designed for building agent observability tools, testing process mining algorithms, and training anomaly detection models.
+
+**Dataset on Hugging Face:** [`juliensimon/open-agent-traces`](https://huggingface.co/datasets/juliensimon/open-agent-traces) — 17,000+ events across 10 domains
+
+## Why synthetic agent traces?
+
+Real agent traces from production systems are scarce, proprietary, and hard to share. ocelgen fills this gap by generating structurally valid, semantically rich traces that look like real multi-agent executions — complete with LLM prompts, completions, tool calls, agent reasoning, and labeled deviations.
 
 ## Features
 
 - **OCEL 2.0 compliant** output validated against the official JSON schema
-- **Multiple workflow patterns**: sequential, supervisor, and parallel agent architectures
-- **Configurable deviation injection** for conformance checking scenarios
-- **Reproducible generation** with seed support
-- **Rich CLI** with progress feedback and summary tables
+- **LLM-enriched content** — realistic prompts, completions, tool I/O, and chain-of-thought reasoning generated via OpenRouter
+- **10 built-in domains** — customer support, code review, market research, legal analysis, data pipeline debugging, content generation, financial analysis, incident response, academic paper review, e-commerce product enrichment
+- **3 workflow patterns** — sequential chains, supervisor/worker delegation, parallel fan-out/fan-in
+- **Configurable deviation injection** — 10 deviation types (skipped steps, wrong tools, timeouts, etc.) with ground-truth labels for conformance checking
+- **Reproducible generation** with deterministic seeding
+- **Hugging Face Hub integration** — generate, enrich, and upload datasets in one command
 
-## Installation
+## Quick start
 
 ```bash
-# Clone the repository
+# Install
 git clone https://github.com/juliensimon/ocel-generator.git
 cd ocel-generator
-
-# Install with uv (recommended)
 uv sync
 
-# Or with pip
-pip install -e .
-```
-
-For conformance checking support with pm4py:
-```bash
-uv sync --extra conformance
-```
-
-## Quick Start
-
-Generate 100 sequential workflow runs with 20% noise:
-
-```bash
+# Generate structural traces
 ocelgen generate --pattern sequential --runs 100 --noise 0.2
+
+# Enrich with LLM content (requires OPENAI_API_KEY for OpenRouter)
+ocelgen enrich output.jsonocel --domain customer-support-triage
+
+# Or run the full pipeline: generate + enrich + upload to HF
+ocelgen pipeline --domain customer-support-triage --namespace your-hf-username
+
+# Generate all 10 domains
+ocelgen pipeline --all --namespace your-hf-username
 ```
 
-This produces three files:
-- `output.jsonocel` — the OCEL 2.0 event log
-- `normative_model.json` — the expected workflow template
-- `manifest.json` — generation metadata and injected deviations
+## Using the pre-built dataset
 
-## CLI Commands
+The dataset is available on Hugging Face with 10 domain configurations:
 
-### generate
+```python
+from datasets import load_dataset
 
-Generate synthetic OCEL 2.0 event logs.
+# Load a specific domain
+ds = load_dataset("juliensimon/open-agent-traces", "incident-response")
 
-```bash
-ocelgen generate [OPTIONS]
+# Browse a workflow run
+for event in ds["train"]:
+    if event["run_id"] == "run-0000":
+        print(f"{event['event_type']:25s} | {event['agent_role']:12s} | {event['reasoning'][:60] if event['reasoning'] else ''}")
+
+# Analyze deviations
+deviant = ds["train"].filter(lambda x: x["is_deviation"])
+print(f"Deviation types: {set(e for e in deviant['deviation_type'] if e)}")
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `-p, --pattern` | `sequential` | Workflow pattern (`sequential`, `supervisor`, `parallel`) |
-| `-n, --runs` | `100` | Number of workflow runs to generate |
-| `-N, --noise` | `0.2` | Fraction of runs with deviations (0.0–1.0) |
-| `--max-deviations` | `3` | Maximum deviations per deviant run |
-| `--seed` | random | Random seed for reproducibility |
-| `-o, --output` | `output.jsonocel` | Output file path |
+Available domains: `customer-support-triage`, `code-review-pipeline`, `market-research`, `legal-document-analysis`, `data-pipeline-debugging`, `content-generation`, `financial-analysis`, `incident-response`, `academic-paper-review`, `ecommerce-product-enrichment`
 
-### validate
+## CLI commands
 
-Validate an OCEL 2.0 JSON file against the official schema.
-
-```bash
-ocelgen validate path/to/file.jsonocel
-```
-
-### list-patterns
-
-List available workflow patterns with descriptions.
-
-```bash
-ocelgen list-patterns
-```
-
-## Workflow Patterns
-
-| Pattern | Description |
+| Command | Description |
 |---------|-------------|
-| `sequential` | Linear chain of agents passing results forward |
-| `supervisor` | Central supervisor delegates to worker agents |
-| `parallel` | Agents execute concurrently with fan-out/fan-in |
+| `ocelgen generate` | Generate structural OCEL 2.0 event logs |
+| `ocelgen enrich` | Enrich traces with LLM-generated content |
+| `ocelgen upload` | Upload enriched traces to Hugging Face Hub |
+| `ocelgen pipeline` | End-to-end: generate + enrich + upload |
+| `ocelgen validate` | Validate OCEL 2.0 JSON against the schema |
+| `ocelgen list-patterns` | List available workflow patterns |
+| `ocelgen list-domains` | List available domain scenarios |
 
-## Deviation Types
+## Workflow patterns
 
-The generator can inject various deviations to create non-conformant traces:
+| Pattern | Description | Agents |
+|---------|-------------|--------|
+| `sequential` | Linear chain: A &rarr; B &rarr; C | 3 agents |
+| `supervisor` | Central supervisor delegates to workers | 5 agents |
+| `parallel` | Fan-out to concurrent agents, then aggregate | 5 agents |
+
+## Deviation types for conformance checking
+
+ocelgen injects labeled deviations into traces, creating ground-truth data for evaluating conformance checking algorithms:
 
 | Deviation | Description |
 |-----------|-------------|
-| `skipped_activity` | Required step omitted from execution |
-| `inserted_activity` | Unexpected step added to workflow |
-| `wrong_resource` | Step executed by incorrect agent |
-| `swapped_order` | Steps executed out of expected order |
-| `wrong_tool` | Incorrect tool used for a step |
+| `skipped_activity` | Required step omitted |
+| `inserted_activity` | Unexpected step added |
+| `wrong_resource` | Step handled by wrong agent |
+| `swapped_order` | Steps executed out of order |
+| `wrong_tool` | Incorrect tool used |
 | `repeated_activity` | Step executed multiple times |
 | `timeout` | Step exceeded expected duration |
-| `wrong_routing` | Incorrect routing decision in supervisor pattern |
-| `missing_handoff` | Agent handoff not properly recorded |
-| `extra_llm_call` | Unexpected LLM invocation |
+| `wrong_routing` | Incorrect supervisor routing |
+| `missing_handoff` | Agent handoff not recorded |
+| `extra_llm_call` | Unnecessary LLM invocation |
 
-## Output Format
+## Architecture
 
-### OCEL 2.0 Event Log
+Two-pass generation:
 
-The generated `.jsonocel` file follows the [OCEL 2.0 JSON specification](https://www.ocel-standard.org/) with:
+1. **Structural pass** — generates OCEL 2.0 compliant traces with events, objects, and relationships. Deviation injection mutates conformant traces to create labeled anomalies. Fast, free, deterministic.
 
-- **Object types**: `run`, `agent`, `tool`, `llm`
-- **Event types**: `start_run`, `llm_call`, `tool_call`, `agent_handoff`, `end_run`, etc.
-- **Relationships**: Events linked to relevant objects via `o2o` and `e2o` mappings
+2. **Enrichment pass** — walks each trace and calls an LLM (via OpenRouter) to fill in realistic content: prompts, completions, tool inputs/outputs, agent reasoning, and inter-agent messages. Each step's output chains into the next step's context for coherence.
 
-### Normative Model
+Quality measures:
+- Token counts calibrated to actual content length
+- Realistic timestamps (seconds-scale LLM latencies)
+- Unique queries per run (LLM-expanded from seed set)
+- Deviation-aware content (deviant steps reflect failures in reasoning)
+- Parallel aggregator coherence (aggregator sees all workers' outputs)
 
-The `normative_model.json` contains the expected workflow template for conformance checking, including step sequences, allowed agents, and expected tools.
+## Use cases
 
-### Manifest
-
-The `manifest.json` records generation parameters and a complete list of injected deviations with their locations, enabling ground-truth evaluation of conformance checking algorithms.
+- **Agent observability** — build and test dashboards for multi-agent workflow monitoring
+- **Process mining** — apply OCEL 2.0 conformance checking algorithms
+- **Anomaly detection** — train classifiers on conformant vs deviant agent behavior
+- **Agent evaluation** — benchmark reasoning quality across domains
+- **Trace analysis research** — study information flow in multi-agent architectures
 
 ## Development
 
 ```bash
-# Install dev dependencies
 uv sync --extra dev
-
-# Run tests
-pytest
-
-# Type checking
-mypy src
-
-# Linting
-ruff check src tests
+pytest                # Run tests
+mypy src              # Type checking
+ruff check src tests  # Linting
 ```
 
 ## License

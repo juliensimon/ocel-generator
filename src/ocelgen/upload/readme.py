@@ -73,6 +73,11 @@ def generate_dataset_card(
 configs:
 {configs_yaml}
 license: mit
+language:
+  - en
+task_categories:
+  - text-generation
+  - text-classification
 tags:
   - agent-traces
   - ocel
@@ -81,21 +86,30 @@ tags:
   - synthetic
   - llm-agents
   - conformance-checking
+  - ai-agents
+  - workflow-traces
+  - agent-observability
+  - tool-use
+  - chain-of-thought
+  - anomaly-detection
+pretty_name: Open Agent Traces
 size_categories:
   - 10K<n<100K
 ---
 
-# Open Agent Traces
+# Open Agent Traces — Synthetic Multi-Agent Workflow Dataset
 
-**{total_events:,} synthetic multi-agent workflow events** across **{total_runs} runs** in **10 domains**, with LLM-enriched content: prompts, completions, tool I/O, agent reasoning, and deviation labels.
+**{total_events:,} LLM-enriched agent trace events** across **{total_runs} workflow runs** in **10 domains** and **3 workflow patterns** (sequential, supervisor, parallel).
+
+Each trace contains realistic **LLM prompts and completions**, **tool call inputs and outputs**, **agent chain-of-thought reasoning**, **inter-agent messages**, and **labeled deviations** for conformance checking.
+
+> Generated with **[ocelgen]({GITHUB_URL})** — an open-source synthetic agent trace generator.
 
 ```python
 from datasets import load_dataset
 
-# Load a specific domain
 ds = load_dataset("{repo_name}", "incident-response")
 
-# Browse a run
 for event in ds["train"]:
     if event["run_id"] == "run-0000":
         print(f"{{event['event_type']:25s}} | {{event['agent_role']:12s}} | {{event['reasoning'][:60] if event['reasoning'] else ''}}")
