@@ -15,7 +15,15 @@ from ocelgen.export.manifest import write_manifest
 from ocelgen.export.normative import write_normative_model
 from ocelgen.export.ocel_json import write_ocel_json
 from ocelgen.generation.engine import PATTERN_REGISTRY, generate
+from ocelgen.scenarios.domain import DomainScenario
 from ocelgen.validation.schema import validate_ocel_file
+
+
+def _get_registry(config: Path | None) -> dict[str, DomainScenario]:
+    """Build the scenario registry, merging custom YAML config if provided."""
+    from ocelgen.scenarios.loader import build_registry
+
+    return build_registry(config)
 
 app = typer.Typer(
     name="ocelgen",
@@ -129,9 +137,14 @@ def list_patterns() -> None:
 
 
 @app.command("list-domains")
-def list_domains() -> None:
+def list_domains(
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", help="YAML file or directory with custom domain definitions"),
+    ] = None,
+) -> None:
     """List available domain scenarios for enriched generation."""
-    from ocelgen.scenarios.registry import SCENARIO_REGISTRY
+    registry = _get_registry(config)
 
     table = Table(title="Available Domain Scenarios")
     table.add_column("Name", style="bold", no_wrap=True)
@@ -140,7 +153,7 @@ def list_domains() -> None:
     table.add_column("Noise", justify="right")
     table.add_column("Description")
 
-    for name, scenario in SCENARIO_REGISTRY.items():
+    for name, scenario in registry.items():
         table.add_row(
             name,
             scenario.pattern,
@@ -150,7 +163,7 @@ def list_domains() -> None:
         )
 
     console.print(table)
-    console.print(f"\n[bold]{len(SCENARIO_REGISTRY)}[/bold] domains available.")
+    console.print(f"\n[bold]{len(registry)}[/bold] domains available.")
 
 
 @app.command("enrich")
@@ -163,6 +176,10 @@ def enrich_cmd(
     output: Annotated[
         Path | None, typer.Option("-o", "--output", help="Output path")
     ] = None,
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", help="YAML file or directory with custom domain definitions"),
+    ] = None,
 ) -> None:
     """Enrich an OCEL 2.0 trace with LLM-generated content."""
     from pydantic import TypeAdapter
@@ -172,17 +189,19 @@ def enrich_cmd(
     from ocelgen.enrichment.enricher import enrich_log
     from ocelgen.export.ocel_json import ocel_log_to_dict
     from ocelgen.models.ocel import OcelLog
-    from ocelgen.scenarios.registry import SCENARIO_REGISTRY, get_scenario
+    from ocelgen.scenarios.registry import get_scenario
+
+    registry = _get_registry(config)
 
     if not path.exists():
         console.print(f"[red]File not found: {path}[/red]")
         raise typer.Exit(1)
 
-    if domain not in SCENARIO_REGISTRY:
+    if domain not in registry:
         console.print(f"[red]Unknown domain '{domain}'. Use 'list-domains' to see available domains.[/red]")
         raise typer.Exit(1)
 
-    scenario = get_scenario(domain)
+    scenario = get_scenario(domain, registry=registry)
 
     console.print(f"Loading [bold]{path}[/bold]...")
     with open(path, encoding="utf-8") as f:
@@ -213,20 +232,26 @@ def upload_cmd(
     collection: Annotated[
         str, typer.Option("--collection", help="Collection slug")
     ] = "open-agent-traces",
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", help="YAML file or directory with custom domain definitions"),
+    ] = None,
 ) -> None:
     """Upload an enriched trace to Hugging Face Hub."""
     from pydantic import TypeAdapter
 
     from ocelgen.models.ocel import OcelLog
-    from ocelgen.scenarios.registry import SCENARIO_REGISTRY, get_scenario
+    from ocelgen.scenarios.registry import get_scenario
     from ocelgen.upload.flatten import flatten_log
     from ocelgen.upload.hf_upload import build_repo_name, prepare_upload_files, upload_to_hub
+
+    registry = _get_registry(config)
 
     if not path.exists():
         console.print(f"[red]File not found: {path}[/red]")
         raise typer.Exit(1)
 
-    if domain not in SCENARIO_REGISTRY:
+    if domain not in registry:
         console.print(f"[red]Unknown domain '{domain}'.[/red]")
         raise typer.Exit(1)
 
@@ -234,7 +259,7 @@ def upload_cmd(
         console.print("[red]--namespace is required.[/red]")
         raise typer.Exit(1)
 
-    scenario = get_scenario(domain)
+    scenario = get_scenario(domain, registry=registry)
 
     console.print(f"Loading [bold]{path}[/bold]...")
     with open(path, encoding="utf-8") as f:
@@ -278,7 +303,7 @@ def pipeline_cmd(
         str | None, typer.Option("--domain", "-d", help="Single domain to process")
     ] = None,
     all_domains: Annotated[
-        bool, typer.Option("--all", help="Process all 10 domains")
+        bool, typer.Option("--all", help="Process all domains")
     ] = False,
     namespace: Annotated[str, typer.Option("--namespace", "-n", help="HF namespace")] = "",
     model: Annotated[
@@ -290,13 +315,17 @@ def pipeline_cmd(
     skip_upload: Annotated[
         bool, typer.Option("--skip-upload", help="Generate and enrich but don't upload")
     ] = False,
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", help="YAML file or directory with custom domain definitions"),
+    ] = None,
 ) -> None:
     """End-to-end pipeline: generate, enrich, and upload agent trace datasets."""
     from rich.progress import Progress
 
     from ocelgen.enrichment.client import LLMClient
     from ocelgen.enrichment.enricher import enrich_log
-    from ocelgen.scenarios.registry import SCENARIO_REGISTRY, get_scenario
+    from ocelgen.scenarios.registry import get_scenario
     from ocelgen.upload.flatten import flatten_log
     from ocelgen.upload.hf_upload import (
         build_repo_name,
@@ -304,6 +333,8 @@ def pipeline_cmd(
         prepare_upload_files,
         upload_to_hub,
     )
+
+    registry = _get_registry(config)
 
     if not namespace:
         console.print("[red]--namespace is required.[/red]")
@@ -313,10 +344,10 @@ def pipeline_cmd(
         console.print("[red]Specify --domain <name> or --all.[/red]")
         raise typer.Exit(1)
 
-    domains: list[str] = list(SCENARIO_REGISTRY.keys()) if all_domains else [domain]  # type: ignore[list-item]
+    domains: list[str] = list(registry.keys()) if all_domains else [domain]  # type: ignore[list-item]
 
     for d in domains:
-        if d not in SCENARIO_REGISTRY:
+        if d not in registry:
             console.print(f"[red]Unknown domain '{d}'.[/red]")
             raise typer.Exit(1)
 
@@ -324,7 +355,7 @@ def pipeline_cmd(
     uploaded_repos: list[str] = []
 
     for d in domains:
-        scenario = get_scenario(d)
+        scenario = get_scenario(d, registry=registry)
         console.rule(f"[bold]{scenario.name}[/bold] ({scenario.pattern})")
 
         console.print(f"Generating {scenario.runs} runs...")
