@@ -313,7 +313,7 @@ def pipeline_cmd(
         console.print("[red]Specify --domain <name> or --all.[/red]")
         raise typer.Exit(1)
 
-    domains = list(SCENARIO_REGISTRY.keys()) if all_domains else [domain]
+    domains: list[str] = list(SCENARIO_REGISTRY.keys()) if all_domains else [domain]  # type: ignore[list-item]
 
     for d in domains:
         if d not in SCENARIO_REGISTRY:
