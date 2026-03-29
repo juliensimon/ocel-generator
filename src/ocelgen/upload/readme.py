@@ -128,7 +128,7 @@ Each trace captures the full execution of a multi-agent workflow — the same da
 - **Deviation labels** — ground-truth annotations marking conformant vs anomalous behavior
 - **Realistic timestamps** — seconds-scale LLM latencies, not synthetic milliseconds
 
-The traces follow the **[OCEL 2.0](https://www.ocel-standard.org/) standard** (Object-Centric Event Logs), making them compatible with process mining tools like PM4Py and Celonis.
+The traces follow the **[OCEL 2.0](https://www.ocel-standard.org/) standard** (Object-Centric Event Logs), making them compatible with process mining tools and conformance checking algorithms.
 
 ## Domains
 
@@ -207,7 +207,7 @@ for domain in ["customer-support-triage", "incident-response", "code-review-pipe
 - **Agent observability and debugging** — build and test monitoring dashboards for multi-agent workflows, with the same data platforms like LangSmith, Arize, and Braintrust display
 - **Agent evaluation and benchmarking** — compare agent reasoning across sequential (LangChain-style), supervisor (CrewAI-style), and parallel (LangGraph-style) architectures
 - **Conformance checking and anomaly detection** — train models to detect deviant agent behavior using labeled ground-truth deviations
-- **Process mining** — apply OCEL 2.0 algorithms to multi-agent systems, compatible with PM4Py and other frameworks
+- **Process mining** — apply OCEL 2.0 conformance checking algorithms to multi-agent systems
 - **Agent framework testing** — validate orchestration frameworks against realistic trace data across 10 enterprise domains
 
 ## Files per domain

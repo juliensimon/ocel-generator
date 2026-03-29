@@ -40,7 +40,7 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
-ignore = ["E501"]  # Long lines in prompt templates and CLI strings
+ignore = ["E501", "UP042"]  # Long lines; str+Enum pattern used for Python 3.11 compat
 
 [tool.ruff.lint.per-file-ignores]
 # OCEL 2.0 schema requires camelCase field names (objectId, eventTypes, etc.)
