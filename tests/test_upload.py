@@ -1,7 +1,7 @@
 """Tests for HF upload utilities."""
 
-from ocelgen.upload.readme import generate_dataset_card
 from ocelgen.scenarios.domain import DomainScenario
+from ocelgen.upload.readme import generate_dataset_card
 
 
 def _make_scenario() -> DomainScenario:
@@ -57,9 +57,8 @@ class TestDatasetCard:
 
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-from ocelgen.upload.hf_upload import prepare_upload_files, build_repo_name, prepare_domain_files
+from ocelgen.upload.hf_upload import build_repo_name, prepare_domain_files, prepare_upload_files
 
 
 class TestBuildRepoName:

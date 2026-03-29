@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ocelgen.enrichment.client import LLMClient, EnrichmentResponse
+from ocelgen.enrichment.client import EnrichmentResponse, LLMClient
 
 
 class TestLLMClient:
@@ -140,11 +139,10 @@ class TestPromptBuilder:
         assert "no tools" in user.lower() or "none" in user.lower() or "0" in user
 
 
-from unittest.mock import MagicMock
 
-from ocelgen.enrichment.enricher import enrich_log, _extract_steps_from_log
-from ocelgen.generation.engine import generate
+from ocelgen.enrichment.enricher import _extract_steps_from_log, enrich_log
 from ocelgen.export.ocel_json import ocel_log_to_dict
+from ocelgen.generation.engine import generate
 from ocelgen.scenarios.domain import DomainScenario
 
 

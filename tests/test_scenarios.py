@@ -2,7 +2,7 @@
 
 import pytest
 
-from ocelgen.scenarios import DomainScenario, SCENARIO_REGISTRY, get_scenario
+from ocelgen.scenarios import SCENARIO_REGISTRY, DomainScenario, get_scenario
 
 
 class TestDomainScenario:

@@ -21,7 +21,7 @@ def generate_dataset_card(
     """
     repo_name = f"{namespace}/open-agent-traces"
     total_events = sum(s["num_events"] for s in domain_stats.values())
-    total_objects = sum(s["num_objects"] for s in domain_stats.values())
+    sum(s["num_objects"] for s in domain_stats.values())
     total_runs = sum(s.runs for s in scenarios)
 
     # Build configs YAML

@@ -31,7 +31,7 @@ dev = [
 ocelgen = "ocelgen.cli:app"
 
 [build-system]
-requires = ["uv_build>=0.9.18,<0.10.0"]
+requires = ["uv_build>=0.9.18"]
 build-backend = "uv_build"
 
 [tool.ruff]
@@ -40,16 +40,25 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]  # Long lines in prompt templates and CLI strings
 
 [tool.ruff.lint.per-file-ignores]
 # OCEL 2.0 schema requires camelCase field names (objectId, eventTypes, etc.)
 "src/ocelgen/models/ocel.py" = ["N815"]
+# Tests use mid-file imports for test organization
+"tests/*.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+
+exclude = ["mlx"]
+
+[[tool.mypy.overrides]]
+module = ["faker", "pyarrow", "pyarrow.parquet", "jsonschema", "huggingface_hub", "mlx.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

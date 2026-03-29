@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import random
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from rich.progress import Progress, TaskID
 
@@ -317,7 +317,6 @@ def _detect_parallel_groups(steps: list[dict]) -> dict[int, list[int]]:
         inv_id = steps[i]["invocation_id"]
         if "-parallel-" in inv_id or "-worker-" in inv_id:
             # Find all consecutive parallel workers
-            group_start = i
             group_indices = []
             while i < len(steps):
                 iid = steps[i]["invocation_id"]
