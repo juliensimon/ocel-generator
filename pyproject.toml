@@ -60,5 +60,10 @@ exclude = ["mlx"]
 module = ["faker", "pyarrow", "pyarrow.parquet", "jsonschema", "huggingface_hub", "mlx.*"]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = ["ocelgen.enrichment.*", "ocelgen.upload.*", "ocelgen.scenarios.*"]
+strict = false
+disallow_untyped_defs = false
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
