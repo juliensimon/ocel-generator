@@ -7,11 +7,11 @@ Generate realistic, LLM-enriched multi-agent workflow trace datasets in [OCEL 2.
 
 **Pre-built dataset:** [`juliensimon/open-agent-traces`](https://huggingface.co/datasets/juliensimon/open-agent-traces) — 17,000+ events, 10 domains, 3 workflow patterns
 
-## Example: Incident Response Workflow Run
+## Example: Market Research Parallel Workflow
 
-![Incident response workflow run](docs/run-example.png)
+![Parallel workflow trace](docs/parallel-workflow-example.png)
 
-A single supervisor-pattern run showing: supervisor planning → routing decisions to specialist agents → parallel worker execution (diagnostics, mitigation, communications) with LLM calls and tool invocations → aggregation. Deviation markers highlight anomalous events.
+A single parallel-pattern run showing the full agent execution trace with **real enriched content**: the planner fans out to three concurrent workers (researcher, analyst, writer), each making LLM calls and tool invocations with domain-specific inputs/outputs, then the aggregator synthesizes all results into a final report.
 
 ## Why synthetic agent traces?
 
