@@ -1,8 +1,17 @@
 # ocelgen — Synthetic Agent Traces Dataset Generator
 
-Generate realistic, LLM-enriched multi-agent workflow trace datasets in [OCEL 2.0](https://www.ocel-standard.org/) format. Designed for building agent observability tools, testing process mining algorithms, and training anomaly detection models.
+Generate realistic, LLM-enriched multi-agent workflow trace datasets in [OCEL 2.0](https://www.ocel-standard.org/) format. Built for the AI agent ecosystem: observability tooling, process mining research, anomaly detection, and agent evaluation.
 
-**Dataset on Hugging Face:** [`juliensimon/open-agent-traces`](https://huggingface.co/datasets/juliensimon/open-agent-traces) — 17,000+ events across 10 domains
+[![Dataset on HF](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-open--agent--traces-yellow)](https://huggingface.co/datasets/juliensimon/open-agent-traces)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+**Pre-built dataset:** [`juliensimon/open-agent-traces`](https://huggingface.co/datasets/juliensimon/open-agent-traces) — 17,000+ events, 10 domains, 3 workflow patterns
+
+## Example: Incident Response Workflow Run
+
+![Incident response workflow run](docs/run-example.png)
+
+A single supervisor-pattern run showing: supervisor planning → routing decisions to specialist agents → parallel worker execution (diagnostics, mitigation, communications) with LLM calls and tool invocations → aggregation. Deviation markers highlight anomalous events.
 
 ## Why synthetic agent traces?
 
@@ -113,13 +122,58 @@ Quality measures:
 - Deviation-aware content (deviant steps reflect failures in reasoning)
 - Parallel aggregator coherence (aggregator sees all workers' outputs)
 
-## Use cases
+## Use cases for AI agent development
 
-- **Agent observability** — build and test dashboards for multi-agent workflow monitoring
-- **Process mining** — apply OCEL 2.0 conformance checking algorithms
-- **Anomaly detection** — train classifiers on conformant vs deviant agent behavior
-- **Agent evaluation** — benchmark reasoning quality across domains
-- **Trace analysis research** — study information flow in multi-agent architectures
+### Agent observability and debugging
+Build and test monitoring dashboards that visualize multi-agent workflow execution. The traces include realistic timestamps, token counts, and cost estimates — exactly what tools like LangSmith, Arize, Braintrust, and Weights & Biases need to display.
+
+### Agent evaluation and benchmarking
+Compare agent reasoning quality across domains and patterns. The dataset covers sequential chains (LangChain-style), supervisor/worker delegation (CrewAI-style), and parallel fan-out (LangGraph-style) — the three most common agentic architectures.
+
+### Conformance checking and anomaly detection
+Train classifiers to distinguish conformant from deviant agent behavior. Each dataset includes labeled deviations (wrong tools, skipped steps, timeouts) with ground-truth annotations — ready for supervised ML.
+
+### Process mining on agent workflows
+Apply OCEL 2.0 process mining algorithms to multi-agent systems. The traces use the official Object-Centric Event Log standard with proper object types (agents, LLM calls, tool calls, messages) and relationships.
+
+### Agent framework testing
+Test agent orchestration frameworks (LangGraph, CrewAI, AutoGen, Smolagents) against realistic trace data. The 10 domains cover common enterprise use cases: customer support, code review, incident response, data pipeline debugging, and more.
+
+## Model and endpoint configuration
+
+ocelgen uses any **OpenAI-compatible API endpoint** for enrichment. Set `OPENAI_API_KEY` and optionally override the base URL:
+
+```bash
+# OpenRouter (default)
+export OPENAI_API_KEY="sk-or-v1-..."
+ocelgen enrich output.jsonocel --domain incident-response --model google/gemini-2.0-flash-001
+
+# OpenAI directly
+export OPENAI_API_KEY="sk-..."
+export OPENAI_BASE_URL="https://api.openai.com/v1"
+ocelgen enrich output.jsonocel --domain incident-response --model gpt-4o-mini
+
+# Local models (Ollama, vLLM, etc.)
+export OPENAI_API_KEY="not-needed"
+export OPENAI_BASE_URL="http://localhost:11434/v1"
+ocelgen enrich output.jsonocel --domain incident-response --model llama3
+```
+
+**Model recommendations:**
+
+| Model | Speed | Cost/500 runs | Best for |
+|-------|-------|---------------|----------|
+| `google/gemini-2.0-flash-001` | Fast | ~$2 | Default — good balance |
+| `openai/gpt-4o-mini` | Fast | ~$3 | High quality at low cost |
+| `anthropic/claude-haiku` | Fast | ~$2 | Concise, structured output |
+| `openai/gpt-4o` | Slower | ~$15 | Maximum content quality |
+| Local (Llama 3, Mistral) | Varies | Free | Privacy, offline use |
+
+## Documentation
+
+- [Quick Start](docs/quickstart.md) — generate your first dataset in 5 minutes
+- [User Guide](docs/user-guide.md) — CLI reference, patterns, domains, enrichment details
+- [Dataset on Hugging Face](https://huggingface.co/datasets/juliensimon/open-agent-traces) — pre-built dataset, ready to use
 
 ## Development
 
