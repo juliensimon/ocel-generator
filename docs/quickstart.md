@@ -75,9 +75,43 @@ ocelgen pipeline --domain customer-support-triage --namespace your-hf-username
 
 This runs the full pipeline (generate + enrich + flatten + upload) and creates a dataset on HF Hub.
 
+## Step 5: Use custom domains (optional)
+
+Define your own domains in a YAML file:
+
+```yaml
+# my-domains.yaml
+domains:
+  - name: "hr-onboarding"
+    description: "HR onboarding: collect docs, run checks, provision access"
+    pattern: "sequential"
+    runs: 30
+    noise: 0.15
+    seed: 50001
+    user_queries:
+      - "New hire John Smith starting March 15 as Senior Engineer"
+      - "Onboard contractor Maria Garcia for 6-month engagement"
+    agent_personas:
+      researcher: "You are an HR coordinator collecting new hire documentation"
+      analyst: "You are a compliance officer verifying background checks"
+      summarizer: "You are an IT provisioner setting up accounts and access"
+    tool_descriptions:
+      web_search: "Search HR knowledge base for onboarding checklists"
+      file_reader: "Read employee records and compliance documents"
+```
+
+Then pass it with `--config`:
+
+```bash
+ocelgen enrich output.jsonocel --domain hr-onboarding --config my-domains.yaml
+ocelgen pipeline --domain hr-onboarding --config my-domains.yaml --namespace your-hf-username
+```
+
+Custom domains merge with the 10 built-ins. To override a built-in, use the same `name`.
+
 ## Next steps
 
 - Read the [User Guide](user-guide.md) for detailed configuration options
 - Try different [workflow patterns](user-guide.md#workflow-patterns): `sequential`, `supervisor`, `parallel`
-- Explore all 10 [built-in domains](user-guide.md#domains)
+- Explore all 10 [built-in domains](user-guide.md#domains) or [define your own](user-guide.md#custom-domains)
 - Use the [pre-built dataset](https://huggingface.co/datasets/juliensimon/open-agent-traces) directly

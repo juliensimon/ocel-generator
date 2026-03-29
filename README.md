@@ -20,7 +20,7 @@ Real agent traces are scarce. Production multi-agent systems generate rich execu
 ocelgen generates **structurally valid, semantically rich** agent traces that look and feel like real multi-agent executions:
 
 - **Full trace content** — LLM prompts and completions, tool call inputs/outputs, agent reasoning, inter-agent messages
-- **10 enterprise domains** — customer support, code review, incident response, financial analysis, and 6 more
+- **10 enterprise domains** — customer support, code review, incident response, financial analysis, and 6 more (plus custom domains via YAML)
 - **3 workflow patterns** — sequential, supervisor/worker, parallel fan-out/fan-in
 - **Labeled deviations** — 10 types of anomalies (wrong tools, skipped steps, timeouts) with ground-truth annotations
 - **OCEL 2.0 standard** — compatible with process mining tools (PM4Py, Celonis)
@@ -38,6 +38,9 @@ ocelgen enrich output.jsonocel --domain customer-support-triage
 
 # Or run the full pipeline (generate + enrich + upload to HF)
 ocelgen pipeline --domain customer-support-triage --namespace your-hf-username
+
+# Use custom domains defined in YAML
+ocelgen pipeline --domain my-domain --config domains.yaml --namespace your-hf-username
 ```
 
 ## Use the pre-built dataset
@@ -67,7 +70,7 @@ for event in ds["train"]:
 ## Documentation
 
 - **[Quick Start](docs/quickstart.md)** — first dataset in 5 minutes
-- **[User Guide](docs/user-guide.md)** — CLI reference, patterns, domains, model configuration
+- **[User Guide](docs/user-guide.md)** — CLI reference, patterns, domains, custom YAML config, model configuration
 - **[Dataset on Hugging Face](https://huggingface.co/datasets/juliensimon/open-agent-traces)** — 17,000+ events, ready to use
 
 ## License

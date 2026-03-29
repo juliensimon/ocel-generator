@@ -49,6 +49,7 @@ ocelgen enrich <path> [OPTIONS]
 | `-d, --domain` | required | Domain scenario name |
 | `-m, --model` | `google/gemini-2.0-flash-001` | LLM model for enrichment |
 | `-o, --output` | `enriched-<input>` | Output file path |
+| `-c, --config` | — | YAML file or directory with custom domain definitions |
 
 **Examples:**
 
@@ -61,6 +62,9 @@ ocelgen enrich output.jsonocel --domain incident-response --model openai/gpt-4o-
 
 # Custom output path
 ocelgen enrich output.jsonocel --domain code-review-pipeline -o enriched.jsonocel
+
+# Use a custom domain from YAML
+ocelgen enrich output.jsonocel --domain my-domain --config domains.yaml
 ```
 
 ### `ocelgen pipeline`
@@ -74,10 +78,11 @@ ocelgen pipeline [OPTIONS]
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-d, --domain` | — | Single domain to process |
-| `--all` | `false` | Process all 10 domains |
+| `--all` | `false` | Process all domains |
 | `-n, --namespace` | required | HF namespace for upload |
 | `-m, --model` | `google/gemini-2.0-flash-001` | LLM model |
 | `--skip-upload` | `false` | Generate and enrich without uploading |
+| `-c, --config` | — | YAML file or directory with custom domain definitions |
 
 **Examples:**
 
@@ -85,11 +90,14 @@ ocelgen pipeline [OPTIONS]
 # Single domain, upload to HF
 ocelgen pipeline --domain customer-support-triage --namespace juliensimon
 
-# All 10 domains
-ocelgen pipeline --all --namespace juliensimon
+# All domains (built-in + custom)
+ocelgen pipeline --all --namespace juliensimon --config my-domains/
 
 # Generate and enrich without uploading
 ocelgen pipeline --domain incident-response --namespace test --skip-upload
+
+# Custom domain from YAML
+ocelgen pipeline --domain my-domain --config domains.yaml --namespace test --skip-upload
 ```
 
 ### `ocelgen validate`
@@ -104,9 +112,32 @@ ocelgen validate path/to/file.jsonocel
 
 Show available workflow patterns with step counts.
 
+### `ocelgen upload`
+
+Upload an enriched trace to Hugging Face Hub.
+
+```bash
+ocelgen upload <path> [OPTIONS]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-d, --domain` | required | Domain scenario name |
+| `-n, --namespace` | required | HF namespace |
+| `--collection` | `open-agent-traces` | Collection slug |
+| `-c, --config` | — | YAML file or directory with custom domain definitions |
+
 ### `ocelgen list-domains`
 
-Show all 10 domain scenarios with pattern, run count, and noise level.
+Show available domain scenarios with pattern, run count, and noise level.
+
+```bash
+ocelgen list-domains [OPTIONS]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-c, --config` | — | YAML file or directory with custom domain definitions |
 
 ## Workflow Patterns
 
@@ -160,6 +191,59 @@ Planner → [Worker A || Worker B || Worker C] → Aggregator
 | `incident-response` | supervisor | Route to diagnostics, mitigation, communications |
 | `academic-paper-review` | parallel | Fan-out to methodology, novelty, writing reviewers |
 | `ecommerce-product-enrichment` | sequential | Scrape specs, normalize attributes, generate descriptions |
+
+## Custom Domains
+
+You can define your own domain scenarios in YAML files and use them alongside (or instead of) the 10 built-in domains.
+
+### YAML schema
+
+```yaml
+domains:
+  - name: "my-domain"            # unique identifier (required)
+    description: "What this domain simulates"  # (required)
+    pattern: "sequential"        # sequential | supervisor | parallel (required)
+    runs: 50                     # number of workflow runs (required)
+    noise: 0.20                  # fraction of runs with deviations, 0.0–1.0 (required)
+    seed: 42                     # random seed for reproducibility (required)
+    user_queries:                # seed queries recycled across runs (optional)
+      - "First example query"
+      - "Second example query"
+    agent_personas:              # role → persona description (optional)
+      researcher: "You are a researcher investigating the topic"
+      analyst: "You are an analyst evaluating findings"
+      summarizer: "You are a writer drafting the final report"
+    tool_descriptions:           # tool_name → description (optional)
+      web_search: "Search for relevant information"
+      calculator: "Perform calculations"
+```
+
+A single YAML file can contain multiple domains under the `domains` key.
+
+### Usage
+
+Pass a YAML file or directory with `--config / -c`:
+
+```bash
+# List built-in + custom domains
+ocelgen list-domains --config my-domains.yaml
+
+# Enrich with a custom domain
+ocelgen enrich output.jsonocel --domain my-domain --config my-domains.yaml
+
+# Full pipeline with custom domain
+ocelgen pipeline --domain my-domain --config my-domains.yaml --namespace test --skip-upload
+
+# Load all YAML files from a directory
+ocelgen pipeline --all --config ./domains/ --namespace test --skip-upload
+```
+
+### Merging behavior
+
+Custom domains merge with the 10 built-in domains:
+- **New names** are added to the registry
+- **Matching names** override the built-in (e.g., defining `customer-support-triage` in YAML replaces the built-in version)
+- When loading a directory, files are processed alphabetically; later files override earlier ones for the same domain name
 
 ## Deviation Types
 
