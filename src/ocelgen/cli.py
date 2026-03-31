@@ -173,6 +173,9 @@ def enrich_cmd(
     model: Annotated[
         str, typer.Option("--model", "-m", help="LLM model for enrichment")
     ] = "google/gemini-2.0-flash-001",
+    base_url: Annotated[
+        str | None, typer.Option("--base-url", help="OpenAI-compatible API base URL (e.g. http://localhost:8080/v1)")
+    ] = None,
     output: Annotated[
         Path | None, typer.Option("-o", "--output", help="Output path")
     ] = None,
@@ -210,7 +213,10 @@ def enrich_cmd(
     log = TypeAdapter(OcelLog).validate_python(data)
 
     console.print(f"Enriching with [bold]{model}[/bold] for domain [bold]{domain}[/bold]...")
-    client = LLMClient(model=model)
+    kwargs: dict[str, str] = {"model": model}
+    if base_url:
+        kwargs["base_url"] = base_url
+    client = LLMClient(**kwargs)
 
     with Progress() as progress:
         run_count = len([o for o in log.objects if o.type == "run"])
@@ -309,6 +315,9 @@ def pipeline_cmd(
     model: Annotated[
         str, typer.Option("--model", "-m", help="LLM model for enrichment")
     ] = "google/gemini-2.0-flash-001",
+    base_url: Annotated[
+        str | None, typer.Option("--base-url", help="OpenAI-compatible API base URL (e.g. http://localhost:8080/v1)")
+    ] = None,
     collection: Annotated[
         str, typer.Option("--collection", help="Collection slug")
     ] = "open-agent-traces",
@@ -351,7 +360,10 @@ def pipeline_cmd(
             console.print(f"[red]Unknown domain '{d}'.[/red]")
             raise typer.Exit(1)
 
-    client = LLMClient(model=model)
+    kwargs: dict[str, str] = {"model": model}
+    if base_url:
+        kwargs["base_url"] = base_url
+    client = LLMClient(**kwargs)
     uploaded_repos: list[str] = []
 
     for d in domains:

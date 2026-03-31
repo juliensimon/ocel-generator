@@ -31,9 +31,37 @@ ocelgen generates **structurally valid, semantically rich** agent traces that lo
 ```bash
 git clone https://github.com/juliensimon/ocel-generator.git && cd ocel-generator
 uv sync
+```
 
-# Generate and enrich traces
+### LLM setup
+
+Enrichment requires an OpenAI-compatible endpoint. Pick one:
+
+**Cloud (OpenRouter, OpenAI, etc.)**
+```bash
+export OPENAI_API_KEY="your-key"
+# Default: OpenRouter with Gemini Flash. Override with --model:
+ocelgen enrich output.jsonocel -d customer-support-triage --model anthropic/claude-sonnet-4
+```
+
+**Local (llama.cpp, Ollama, vLLM, etc.)**
+```bash
+# Example: start llama.cpp with auto-download from Hugging Face
+llama-server -hfr unsloth/Qwen3-30B-A3B-GGUF:Q6_K -ngl 99 -c 4096
+
+# Point ocelgen at the local endpoint (no API key needed)
+ocelgen enrich output.jsonocel -d customer-support-triage \
+  --model unsloth/Qwen3-30B-A3B-GGUF:Q6_K \
+  --base-url http://localhost:8080/v1
+```
+
+### Generate and enrich
+
+```bash
+# Generate traces
 ocelgen generate --pattern sequential --runs 50 --noise 0.2
+
+# Enrich with LLM-generated content
 ocelgen enrich output.jsonocel --domain customer-support-triage
 
 # Or run the full pipeline (generate + enrich + upload to HF)

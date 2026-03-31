@@ -1,4 +1,4 @@
-"""OpenRouter LLM client for trace enrichment."""
+"""OpenAI-compatible LLM client for trace enrichment."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ class EnrichmentResponse:
 
 
 class LLMClient:
-    """Thin wrapper around OpenAI-compatible API for OpenRouter."""
+    """Thin wrapper around any OpenAI-compatible API (OpenRouter, llama.cpp, vLLM, etc.)."""
 
     def __init__(
         self,
@@ -63,13 +63,15 @@ class LLMClient:
         base_url: str = DEFAULT_BASE_URL,
     ) -> None:
         api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
+        is_local = base_url.startswith(("http://localhost", "http://127.0.0.1"))
+        if not api_key and not is_local:
             raise ValueError(
-                "OPENAI_API_KEY environment variable is required for enrichment. "
-                "Set it to your OpenRouter API key."
+                "OPENAI_API_KEY environment variable is required for remote endpoints. "
+                "Set it to your API key (e.g. OpenRouter). "
+                "Local servers (localhost) do not require a key."
             )
         self.model = model
-        self._client = OpenAI(api_key=api_key, base_url=base_url)
+        self._client = OpenAI(api_key=api_key or "local", base_url=base_url)
 
     def generate_queries(self, seed_queries: list[str], domain_description: str, count: int) -> list[str]:
         """Generate diverse user queries by expanding from seed examples.
