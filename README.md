@@ -24,7 +24,7 @@ ocelgen generates **structurally valid, semantically rich** agent traces that lo
 - **10 enterprise domains** — customer support, code review, incident response, financial analysis, and 6 more (plus custom domains via YAML)
 - **3 workflow patterns** — sequential, supervisor/worker, parallel fan-out/fan-in
 - **Labeled deviations** — 10 types of anomalies (wrong tools, skipped steps, timeouts) with ground-truth annotations
-- **OCEL 2.0 standard** — compatible with process mining tools (PM4Py, Celonis)
+- **OCEL 2.0 standard** — compatible with process mining tools
 - **Any LLM backend** — OpenRouter, OpenAI, Anthropic, local models via OpenAI-compatible API
 
 ## Quick start
