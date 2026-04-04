@@ -3,6 +3,7 @@
 Generate realistic multi-agent workflow trace datasets with LLM-enriched content. Built for the AI agent ecosystem.
 
 [![Dataset on HF](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-open--agent--traces-yellow)](https://huggingface.co/datasets/juliensimon/open-agent-traces)
+[![PyPI](https://img.shields.io/pypi/v/open-agent-traces)](https://pypi.org/project/open-agent-traces/)
 [![CI](https://github.com/juliensimon/ocel-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/juliensimon/ocel-generator/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://python.org)
@@ -27,6 +28,12 @@ ocelgen generates **structurally valid, semantically rich** agent traces that lo
 - **Any LLM backend** — OpenRouter, OpenAI, Anthropic, local models via OpenAI-compatible API
 
 ## Quick start
+
+```bash
+pip install open-agent-traces
+```
+
+### Development setup
 
 ```bash
 git clone https://github.com/juliensimon/ocel-generator.git && cd ocel-generator
