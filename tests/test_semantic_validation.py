@@ -10,16 +10,14 @@ and validating domain-specific invariants.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 from ocelgen.generation.engine import generate
 from ocelgen.models.ocel import (
     OcelEvent,
     OcelEventAttribute,
-    OcelLog,
     OcelObject,
     OcelObjectAttribute,
-    OcelObjectType,
     OcelRelationship,
 )
 from ocelgen.validation.integrity import (
@@ -28,10 +26,10 @@ from ocelgen.validation.integrity import (
 )
 from ocelgen.validation.temporal import validate_temporal_order
 
-
 # ---------------------------------------------------------------------------
 # Helpers: generate logs for different patterns/configs
 # ---------------------------------------------------------------------------
+
 
 def _generate(pattern: str = "sequential", runs: int = 10, noise: float = 0.2, seed: int = 42):
     """Shorthand to generate a log. Also a code sample for the README."""
@@ -57,7 +55,7 @@ class TestReferentialIntegrity:
         """Generate a clean sequential log and verify all references resolve."""
         result = _generate("sequential", runs=20, noise=0.0)
         errors = validate_referential_integrity(result.log)
-        assert errors == [], f"Dangling references found:\n" + "\n".join(errors)
+        assert errors == [], "Dangling references found:\n" + "\n".join(errors)
 
     def test_supervisor_clean(self) -> None:
         result = _generate("supervisor", runs=20, noise=0.0)
@@ -73,7 +71,7 @@ class TestReferentialIntegrity:
         """Deviation injection must not break referential integrity."""
         result = _generate("sequential", runs=50, noise=1.0, seed=123)
         errors = validate_referential_integrity(result.log)
-        assert errors == [], f"Deviations broke integrity:\n" + "\n".join(errors)
+        assert errors == [], "Deviations broke integrity:\n" + "\n".join(errors)
 
     def test_supervisor_with_deviations(self) -> None:
         result = _generate("supervisor", runs=30, noise=1.0, seed=456)
@@ -93,15 +91,17 @@ class TestReferentialIntegrity:
         log = result.log
 
         # Inject an event that references a non-existent object
-        log.events.append(OcelEvent(
-            id="fake-evt-001",
-            type="run_started",
-            time=datetime(2025, 1, 1, tzinfo=UTC),
-            attributes=[OcelEventAttribute(name="run_id", value="run-9999")],
-            relationships=[
-                OcelRelationship(objectId="ghost-object-999", qualifier="started"),
-            ],
-        ))
+        log.events.append(
+            OcelEvent(
+                id="fake-evt-001",
+                type="run_started",
+                time=datetime(2025, 1, 1, tzinfo=UTC),
+                attributes=[OcelEventAttribute(name="run_id", value="run-9999")],
+                relationships=[
+                    OcelRelationship(objectId="ghost-object-999", qualifier="started"),
+                ],
+            )
+        )
 
         errors = validate_referential_integrity(log)
         assert any("ghost-object-999" in e for e in errors)
@@ -117,23 +117,27 @@ class TestReferentialIntegrity:
     def test_detects_undeclared_event_type(self) -> None:
         result = _generate("sequential", runs=1, noise=0.0)
         log = result.log
-        log.events.append(OcelEvent(
-            id="bad-type-evt",
-            type="totally_made_up_event",
-            time=datetime(2025, 1, 1, tzinfo=UTC),
-            attributes=[],
-        ))
+        log.events.append(
+            OcelEvent(
+                id="bad-type-evt",
+                type="totally_made_up_event",
+                time=datetime(2025, 1, 1, tzinfo=UTC),
+                attributes=[],
+            )
+        )
         errors = validate_referential_integrity(log)
         assert any("undeclared type" in e for e in errors)
 
     def test_detects_undeclared_object_type(self) -> None:
         result = _generate("sequential", runs=1, noise=0.0)
         log = result.log
-        log.objects.append(OcelObject(
-            id="bad-type-obj",
-            type="nonexistent_type",
-            attributes=[],
-        ))
+        log.objects.append(
+            OcelObject(
+                id="bad-type-obj",
+                type="nonexistent_type",
+                attributes=[],
+            )
+        )
         errors = validate_referential_integrity(log)
         assert any("undeclared type" in e for e in errors)
 
@@ -145,7 +149,7 @@ class TestTypeAttributes:
         """All event attributes should match their eventType declarations."""
         result = _generate("sequential", runs=10, noise=0.5)
         errors = validate_type_attributes(result.log)
-        assert errors == [], f"Undeclared attributes:\n" + "\n".join(errors)
+        assert errors == [], "Undeclared attributes:\n" + "\n".join(errors)
 
     def test_all_object_attributes_declared(self) -> None:
         result = _generate("supervisor", runs=10, noise=0.5)
@@ -156,9 +160,7 @@ class TestTypeAttributes:
         result = _generate("sequential", runs=1, noise=0.0)
         log = result.log
         # Add a bogus attribute to the first event
-        log.events[0].attributes.append(
-            OcelEventAttribute(name="secret_field", value="oops")
-        )
+        log.events[0].attributes.append(OcelEventAttribute(name="secret_field", value="oops"))
         errors = validate_type_attributes(log)
         assert any("secret_field" in e for e in errors)
 
@@ -188,7 +190,7 @@ class TestTemporalOrder:
         """Clean sequential runs have correct temporal order."""
         result = _generate("sequential", runs=20, noise=0.0)
         errors = validate_temporal_order(result.log)
-        assert errors == [], f"Temporal order violations:\n" + "\n".join(errors)
+        assert errors == [], "Temporal order violations:\n" + "\n".join(errors)
 
     def test_supervisor_ordering(self) -> None:
         result = _generate("supervisor", runs=20, noise=0.0)
@@ -203,7 +205,7 @@ class TestTemporalOrder:
         # Filter out sequence monotonicity errors — parallel workers
         # interleave their sequences by design
         causal_errors = [e for e in errors if "sequence" not in e]
-        assert causal_errors == [], f"Temporal violations:\n" + "\n".join(causal_errors)
+        assert causal_errors == [], "Temporal violations:\n" + "\n".join(causal_errors)
 
     def test_run_starts_with_run_started(self) -> None:
         """Code sample: extract events for a specific run."""
@@ -211,7 +213,8 @@ class TestTemporalOrder:
 
         # How to get events for a specific run
         run_events = [
-            e for e in result.log.events
+            e
+            for e in result.log.events
             if any(a.name == "run_id" and a.value == "run-0000" for a in e.attributes)
         ]
         run_events.sort(key=lambda e: e.time)
@@ -254,7 +257,8 @@ class TestTemporalOrder:
             run_id = f"run-{run_idx:04d}"
             run_events = sorted(
                 [
-                    e for e in result.log.events
+                    e
+                    for e in result.log.events
                     if any(a.name == "run_id" and a.value == run_id for a in e.attributes)
                 ],
                 key=lambda e: e.time,
@@ -281,13 +285,12 @@ class TestTemporalOrder:
         errors = validate_temporal_order(result.log)
         # Filter to only conformant-run causal violations
         conformant_causal_errors = [
-            e for e in errors
-            if ("completed" in e and "before" in e)
-            and not any(rid in e for rid in deviant_run_ids)
+            e
+            for e in errors
+            if ("completed" in e and "before" in e) and not any(rid in e for rid in deviant_run_ids)
         ]
         assert conformant_causal_errors == [], (
-            f"Causal violations in conformant runs:\n"
-            + "\n".join(conformant_causal_errors)
+            "Causal violations in conformant runs:\n" + "\n".join(conformant_causal_errors)
         )
 
 
@@ -305,7 +308,7 @@ class TestWorkflowConformance:
         """All runs generated with noise=0 should be conformant."""
         result = _generate("sequential", runs=20, noise=0.0)
         errors = validate_workflow_conformance(result.log, result.template)
-        assert errors == [], f"Conformance violations:\n" + "\n".join(errors)
+        assert errors == [], "Conformance violations:\n" + "\n".join(errors)
 
     def test_supervisor_conformant(self) -> None:
         result = _generate("supervisor", runs=20, noise=0.0)
@@ -328,7 +331,8 @@ class TestWorkflowConformance:
         # Extract agent invocations for run-0000
         invoked_events = sorted(
             [
-                e for e in result.log.events
+                e
+                for e in result.log.events
                 if e.type == "agent_invoked"
                 and any(a.name == "run_id" and a.value == "run-0000" for a in e.attributes)
             ],
@@ -354,7 +358,8 @@ class TestWorkflowConformance:
         for step in template.steps:
             # Find agent_invoked events for this step
             step_events = [
-                e for e in result.log.events
+                e
+                for e in result.log.events
                 if e.type == "agent_invoked"
                 and any(a.name == "step_id" and a.value == step.id for a in e.attributes)
                 and any(a.name == "run_id" and a.value == "run-0000" for a in e.attributes)
@@ -375,8 +380,7 @@ class TestWorkflowConformance:
             if run_obj.type != "run":
                 continue
             is_conformant = any(
-                a.name == "is_conformant" and a.value == "true"
-                for a in run_obj.attributes
+                a.name == "is_conformant" and a.value == "true" for a in run_obj.attributes
             )
             if run_obj.id in deviant_run_ids:
                 assert not is_conformant, (
@@ -396,8 +400,6 @@ import pytest
 
 pm4py = pytest.importorskip("pm4py", reason="pm4py not installed")
 
-import json
-import tempfile
 from pathlib import Path
 
 from ocelgen.export.ocel_json import write_ocel_json

@@ -16,9 +16,17 @@ class TestFlatten:
         result = generate("sequential", num_runs=1, noise_rate=0.0, seed=42)
         rows = flatten_log(result.log, domain="test-domain")
         required = {
-            "event_id", "event_type", "timestamp", "run_id",
-            "sequence_number", "is_deviation", "deviation_type",
-            "domain", "is_conformant", "pattern", "user_query",
+            "event_id",
+            "event_type",
+            "timestamp",
+            "run_id",
+            "sequence_number",
+            "is_deviation",
+            "deviation_type",
+            "domain",
+            "is_conformant",
+            "pattern",
+            "user_query",
         }
         for row in rows:
             assert required.issubset(row.keys()), f"Missing columns: {required - row.keys()}"

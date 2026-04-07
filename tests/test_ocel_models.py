@@ -21,18 +21,30 @@ def _make_minimal_log() -> OcelLog:
     log = OcelLog()
 
     # Register types
-    log.add_event_type("run_started", [
-        OcelAttributeDefinition(name="run_id", type="string"),
-    ])
-    log.add_event_type("agent_invoked", [
-        OcelAttributeDefinition(name="run_id", type="string"),
-    ])
-    log.add_object_type("run", [
-        OcelAttributeDefinition(name="status", type="string"),
-    ])
-    log.add_object_type("agent", [
-        OcelAttributeDefinition(name="role", type="string"),
-    ])
+    log.add_event_type(
+        "run_started",
+        [
+            OcelAttributeDefinition(name="run_id", type="string"),
+        ],
+    )
+    log.add_event_type(
+        "agent_invoked",
+        [
+            OcelAttributeDefinition(name="run_id", type="string"),
+        ],
+    )
+    log.add_object_type(
+        "run",
+        [
+            OcelAttributeDefinition(name="status", type="string"),
+        ],
+    )
+    log.add_object_type(
+        "agent",
+        [
+            OcelAttributeDefinition(name="role", type="string"),
+        ],
+    )
 
     # Create objects
     run_obj = OcelObject(
@@ -53,29 +65,33 @@ def _make_minimal_log() -> OcelLog:
     log.add_object(agent_obj)
 
     # Create events
-    log.add_event(OcelEvent(
-        id="evt-001",
-        type="run_started",
-        time=now,
-        attributes=[
-            OcelEventAttribute(name="run_id", value="run-001"),
-        ],
-        relationships=[
-            OcelRelationship(objectId="run-001", qualifier="started"),
-        ],
-    ))
-    log.add_event(OcelEvent(
-        id="evt-002",
-        type="agent_invoked",
-        time=now,
-        attributes=[
-            OcelEventAttribute(name="run_id", value="run-001"),
-        ],
-        relationships=[
-            OcelRelationship(objectId="run-001", qualifier="part_of"),
-            OcelRelationship(objectId="agent-researcher", qualifier="invoked"),
-        ],
-    ))
+    log.add_event(
+        OcelEvent(
+            id="evt-001",
+            type="run_started",
+            time=now,
+            attributes=[
+                OcelEventAttribute(name="run_id", value="run-001"),
+            ],
+            relationships=[
+                OcelRelationship(objectId="run-001", qualifier="started"),
+            ],
+        )
+    )
+    log.add_event(
+        OcelEvent(
+            id="evt-002",
+            type="agent_invoked",
+            time=now,
+            attributes=[
+                OcelEventAttribute(name="run_id", value="run-001"),
+            ],
+            relationships=[
+                OcelRelationship(objectId="run-001", qualifier="part_of"),
+                OcelRelationship(objectId="agent-researcher", qualifier="invoked"),
+            ],
+        )
+    )
 
     return log
 
@@ -91,9 +107,13 @@ class TestOcelModels:
     def test_add_object_deduplicates(self) -> None:
         log = _make_minimal_log()
         now = datetime(2025, 1, 15, 10, 0, 0, tzinfo=UTC)
-        duplicate = OcelObject(id="run-001", type="run", attributes=[
-            OcelObjectAttribute(name="status", value="completed", time=now),
-        ])
+        duplicate = OcelObject(
+            id="run-001",
+            type="run",
+            attributes=[
+                OcelObjectAttribute(name="status", value="completed", time=now),
+            ],
+        )
         log.add_object(duplicate)
         assert len(log.objects) == 2  # Not 3
 

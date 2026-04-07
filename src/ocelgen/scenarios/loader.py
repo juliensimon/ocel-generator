@@ -54,7 +54,7 @@ def load_domains_from_yaml(path: Path) -> dict[str, DomainScenario]:
             raise ValueError(f"Domain '{name}' in {path}: 'runs' must be a positive integer")
 
         noise = entry["noise"]
-        if not isinstance(noise, (int, float)) or not (0.0 <= noise <= 1.0):
+        if not isinstance(noise, int | float) or not (0.0 <= noise <= 1.0):
             raise ValueError(f"Domain '{name}' in {path}: 'noise' must be between 0.0 and 1.0")
 
         seed = entry["seed"]
@@ -83,9 +83,7 @@ def load_domains_from_dir(dir_path: Path) -> dict[str, DomainScenario]:
     earlier ones for domains with the same name.
     """
     result: dict[str, DomainScenario] = {}
-    yaml_files = sorted(
-        p for p in dir_path.iterdir() if p.suffix in {".yaml", ".yml"}
-    )
+    yaml_files = sorted(p for p in dir_path.iterdir() if p.suffix in {".yaml", ".yml"})
     for f in yaml_files:
         result.update(load_domains_from_yaml(f))
     return result

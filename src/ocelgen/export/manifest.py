@@ -22,11 +22,13 @@ def build_manifest(result: GenerationResult, seed: int | None = None) -> dict[st
     for spec in result.deviations:
         if spec.run_id not in deviations_by_run:
             deviations_by_run[spec.run_id] = []
-        deviations_by_run[spec.run_id].append({
-            "deviation_type": spec.deviation_type.value,
-            "step_id": spec.step_id,
-            "description": spec.description,
-        })
+        deviations_by_run[spec.run_id].append(
+            {
+                "deviation_type": spec.deviation_type.value,
+                "step_id": spec.step_id,
+                "description": spec.description,
+            }
+        )
 
     # Build run summary
     runs: list[dict[str, Any]] = []

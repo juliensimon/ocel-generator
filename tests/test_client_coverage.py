@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ocelgen.enrichment.client import LLMClient, EnrichmentResponse
+from ocelgen.enrichment.client import EnrichmentResponse, LLMClient
 
 
 class TestLLMClientGenerate:
@@ -68,9 +68,11 @@ class TestLLMClientGenerateQueries:
         client = self._make_client()
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            "queries": ["q1", "q2", "q3", "q4", "q5"],
-        })
+        mock_response.choices[0].message.content = json.dumps(
+            {
+                "queries": ["q1", "q2", "q3", "q4", "q5"],
+            }
+        )
         client._client.chat.completions.create = MagicMock(return_value=mock_response)
 
         queries = client.generate_queries(["seed1", "seed2"], "test domain", 5)
@@ -80,9 +82,11 @@ class TestLLMClientGenerateQueries:
         client = self._make_client()
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            "queries": ["q1"],
-        })
+        mock_response.choices[0].message.content = json.dumps(
+            {
+                "queries": ["q1"],
+            }
+        )
         client._client.chat.completions.create = MagicMock(return_value=mock_response)
 
         queries = client.generate_queries(["seed1", "seed2"], "test domain", 3)
@@ -96,9 +100,11 @@ class TestLLMClientGenerateQueries:
         client = self._make_client()
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json.dumps({
-            "queries": ["q1", "q2", "q3", "q4", "q5"],
-        })
+        mock_response.choices[0].message.content = json.dumps(
+            {
+                "queries": ["q1", "q2", "q3", "q4", "q5"],
+            }
+        )
         client._client.chat.completions.create = MagicMock(return_value=mock_response)
 
         queries = client.generate_queries(["seed1"], "test domain", 2)

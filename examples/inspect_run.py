@@ -30,7 +30,8 @@ def main() -> None:
     # --- Events timeline ---
     run_events = sorted(
         [
-            e for e in log.events
+            e
+            for e in log.events
             if any(a.name == "run_id" and a.value == run_id for a in e.attributes)
         ],
         key=lambda e: e.time,
@@ -65,7 +66,8 @@ def main() -> None:
 
     # --- Deviation summary ---
     dev_events = [
-        e for e in run_events
+        e
+        for e in run_events
         if any(a.name == "is_deviation" and a.value == "true" for a in e.attributes)
     ]
     if dev_events:
@@ -91,13 +93,23 @@ def main() -> None:
         print(f"\nTool calls ({len(tool_objs)}):")
         for obj in tool_objs:
             oa = {a.name: a.value for a in obj.attributes}
-            print(f"  {oa.get('tool_name'):20s} status={oa.get('status')}  duration={oa.get('duration_ms')}ms")
+            print(
+                f"  {oa.get('tool_name'):20s} status={oa.get('status')}  duration={oa.get('duration_ms')}ms"
+            )
 
     # --- Cost summary ---
     inv_objs = [o for o in log.objects if o.type == "agent_invocation" and o.id.startswith(run_id)]
-    total_cost = sum(float(next((a.value for a in o.attributes if a.name == "cost_usd"), "0")) for o in inv_objs)
-    total_input = sum(int(next((a.value for a in o.attributes if a.name == "input_tokens"), "0")) for o in inv_objs)
-    total_output = sum(int(next((a.value for a in o.attributes if a.name == "output_tokens"), "0")) for o in inv_objs)
+    total_cost = sum(
+        float(next((a.value for a in o.attributes if a.name == "cost_usd"), "0")) for o in inv_objs
+    )
+    total_input = sum(
+        int(next((a.value for a in o.attributes if a.name == "input_tokens"), "0"))
+        for o in inv_objs
+    )
+    total_output = sum(
+        int(next((a.value for a in o.attributes if a.name == "output_tokens"), "0"))
+        for o in inv_objs
+    )
     print(f"\nRun cost: ${total_cost:.6f}  ({total_input} input + {total_output} output tokens)")
 
 

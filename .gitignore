@@ -17,3 +17,4 @@ docs/superpowers/
 
 # Git worktrees
 .worktrees/
+.coverage

@@ -20,7 +20,10 @@ runner = CliRunner()
 _MOCK_LLM_RESPONSE = {
     "reasoning": "Investigating the customer issue step by step.",
     "llm_calls": [
-        {"prompt": "Search for relevant information", "completion": "Found documentation about the issue."},
+        {
+            "prompt": "Search for relevant information",
+            "completion": "Found documentation about the issue.",
+        },
         {"prompt": "Analyze the findings", "completion": "The analysis reveals a clear pattern."},
     ],
     "tool_calls": [
@@ -43,9 +46,18 @@ _MOCK_QUERIES_RESPONSE = {
 def _generate_ocel_file(tmp_path: Path, runs: int = 3) -> Path:
     """Generate a valid OCEL file using the generate command."""
     out = tmp_path / "test.jsonocel"
-    result = runner.invoke(app, [
-        "generate", "-n", str(runs), "--seed", "42", "-o", str(out),
-    ])
+    result = runner.invoke(
+        app,
+        [
+            "generate",
+            "-n",
+            str(runs),
+            "--seed",
+            "42",
+            "-o",
+            str(out),
+        ],
+    )
     assert result.exit_code == 0
     return out
 
@@ -83,12 +95,19 @@ class TestEnrichIntegration:
         out_path = tmp_path / "enriched.jsonocel"
 
         with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
-            result = runner.invoke(app, [
-                "enrich", str(ocel_path),
-                "--domain", "customer-support-triage",
-                "--model", "gpt-4o-mini",
-                "-o", str(out_path),
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "enrich",
+                    str(ocel_path),
+                    "--domain",
+                    "customer-support-triage",
+                    "--model",
+                    "gpt-4o-mini",
+                    "-o",
+                    str(out_path),
+                ],
+            )
 
         assert result.exit_code == 0, f"Exit code {result.exit_code}: {result.output}"
         assert out_path.exists()
@@ -108,11 +127,17 @@ class TestEnrichIntegration:
         ocel_path = _generate_ocel_file(tmp_path, runs=1)
 
         with patch.dict("os.environ", {}, clear=True):
-            result = runner.invoke(app, [
-                "enrich", str(ocel_path),
-                "--domain", "customer-support-triage",
-                "--base-url", "http://localhost:8080/v1",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "enrich",
+                    str(ocel_path),
+                    "--domain",
+                    "customer-support-triage",
+                    "--base-url",
+                    "http://localhost:8080/v1",
+                ],
+            )
 
         assert result.exit_code == 0, f"Exit code {result.exit_code}: {result.output}"
 
@@ -125,10 +150,15 @@ class TestEnrichIntegration:
         ocel_path = _generate_ocel_file(tmp_path, runs=1)
 
         with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
-            result = runner.invoke(app, [
-                "enrich", str(ocel_path),
-                "--domain", "customer-support-triage",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "enrich",
+                    str(ocel_path),
+                    "--domain",
+                    "customer-support-triage",
+                ],
+            )
 
         assert result.exit_code == 0
         # Default output should be enriched-<original>
@@ -147,11 +177,17 @@ class TestUploadIntegration:
 
         ocel_path = _generate_ocel_file(tmp_path, runs=2)
 
-        result = runner.invoke(app, [
-            "upload", str(ocel_path),
-            "--domain", "customer-support-triage",
-            "--namespace", "testuser",
-        ])
+        result = runner.invoke(
+            app,
+            [
+                "upload",
+                str(ocel_path),
+                "--domain",
+                "customer-support-triage",
+                "--namespace",
+                "testuser",
+            ],
+        )
 
         assert result.exit_code == 0, f"Exit code {result.exit_code}: {result.output}"
         assert "Uploaded" in result.output
@@ -186,12 +222,18 @@ class TestPipelineIntegration:
         mock_api.add_collection_item.return_value = None
 
         with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
-            result = runner.invoke(app, [
-                "pipeline",
-                "--domain", "customer-support-triage",
-                "--namespace", "testuser",
-                "--model", "gpt-4o-mini",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "pipeline",
+                    "--domain",
+                    "customer-support-triage",
+                    "--namespace",
+                    "testuser",
+                    "--model",
+                    "gpt-4o-mini",
+                ],
+            )
 
         assert result.exit_code == 0, f"Exit code {result.exit_code}: {result.output}"
         assert "Done!" in result.output
@@ -209,12 +251,17 @@ class TestPipelineIntegration:
         mock_openai_cls.return_value = mock_client
 
         with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
-            result = runner.invoke(app, [
-                "pipeline",
-                "--domain", "customer-support-triage",
-                "--namespace", "testuser",
-                "--skip-upload",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "pipeline",
+                    "--domain",
+                    "customer-support-triage",
+                    "--namespace",
+                    "testuser",
+                    "--skip-upload",
+                ],
+            )
 
         assert result.exit_code == 0, f"Exit code {result.exit_code}: {result.output}"
         assert "Skipping upload" in result.output
@@ -230,12 +277,18 @@ class TestPipelineIntegration:
         mock_openai_cls.return_value = mock_client
 
         with patch.dict("os.environ", {}, clear=True):
-            result = runner.invoke(app, [
-                "pipeline",
-                "--domain", "customer-support-triage",
-                "--namespace", "testuser",
-                "--base-url", "http://localhost:8080/v1",
-                "--skip-upload",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "pipeline",
+                    "--domain",
+                    "customer-support-triage",
+                    "--namespace",
+                    "testuser",
+                    "--base-url",
+                    "http://localhost:8080/v1",
+                    "--skip-upload",
+                ],
+            )
 
         assert result.exit_code == 0, f"Exit code {result.exit_code}: {result.output}"

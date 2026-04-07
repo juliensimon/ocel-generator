@@ -17,15 +17,18 @@ class TestListDomains:
 
 class TestEnrichCommand:
     def test_enrich_requires_existing_file(self) -> None:
-        result = runner.invoke(app, ["enrich", "nonexistent.jsonocel", "--domain", "customer-support-triage"])
+        result = runner.invoke(
+            app, ["enrich", "nonexistent.jsonocel", "--domain", "customer-support-triage"]
+        )
         assert result.exit_code != 0
 
     def test_enrich_requires_valid_domain(self, tmp_path) -> None:
         import json
+
         ocel_path = tmp_path / "test.jsonocel"
-        ocel_path.write_text(json.dumps({
-            "eventTypes": [], "objectTypes": [], "events": [], "objects": []
-        }))
+        ocel_path.write_text(
+            json.dumps({"eventTypes": [], "objectTypes": [], "events": [], "objects": []})
+        )
         result = runner.invoke(app, ["enrich", str(ocel_path), "--domain", "nonexistent-domain"])
         assert result.exit_code != 0
 

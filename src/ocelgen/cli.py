@@ -25,6 +25,7 @@ def _get_registry(config: Path | None) -> dict[str, DomainScenario]:
 
     return build_registry(config)
 
+
 app = typer.Typer(
     name="ocelgen",
     help="Mock OCEL 2.0 event log generator for LangChain multi-agent runs.",
@@ -38,21 +39,15 @@ def generate_cmd(
     pattern: Annotated[
         str, typer.Option("-p", "--pattern", help="Workflow pattern")
     ] = "sequential",
-    runs: Annotated[
-        int, typer.Option("-n", "--runs", help="Number of runs")
-    ] = 100,
-    noise: Annotated[
-        float, typer.Option("-N", "--noise", help="Noise rate (0.0–1.0)")
-    ] = 0.2,
+    runs: Annotated[int, typer.Option("-n", "--runs", help="Number of runs")] = 100,
+    noise: Annotated[float, typer.Option("-N", "--noise", help="Noise rate (0.0–1.0)")] = 0.2,
     max_deviations: Annotated[
         int, typer.Option("--max-deviations", help="Max deviations per run")
     ] = 3,
-    seed: Annotated[
-        int | None, typer.Option("--seed", help="Random seed")
-    ] = None,
-    output: Annotated[
-        Path, typer.Option("-o", "--output", help="Output .jsonocel path")
-    ] = Path("output.jsonocel"),
+    seed: Annotated[int | None, typer.Option("--seed", help="Random seed")] = None,
+    output: Annotated[Path, typer.Option("-o", "--output", help="Output .jsonocel path")] = Path(
+        "output.jsonocel"
+    ),
 ) -> None:
     """Generate mock OCEL 2.0 event logs."""
     if pattern not in PATTERN_REGISTRY:
@@ -140,7 +135,9 @@ def list_patterns() -> None:
 def list_domains(
     config: Annotated[
         Path | None,
-        typer.Option("--config", "-c", help="YAML file or directory with custom domain definitions"),
+        typer.Option(
+            "--config", "-c", help="YAML file or directory with custom domain definitions"
+        ),
     ] = None,
 ) -> None:
     """List available domain scenarios for enriched generation."""
@@ -174,14 +171,17 @@ def enrich_cmd(
         str, typer.Option("--model", "-m", help="LLM model for enrichment")
     ] = "google/gemini-2.0-flash-001",
     base_url: Annotated[
-        str | None, typer.Option("--base-url", help="OpenAI-compatible API base URL (e.g. http://localhost:8080/v1)")
+        str | None,
+        typer.Option(
+            "--base-url", help="OpenAI-compatible API base URL (e.g. http://localhost:8080/v1)"
+        ),
     ] = None,
-    output: Annotated[
-        Path | None, typer.Option("-o", "--output", help="Output path")
-    ] = None,
+    output: Annotated[Path | None, typer.Option("-o", "--output", help="Output path")] = None,
     config: Annotated[
         Path | None,
-        typer.Option("--config", "-c", help="YAML file or directory with custom domain definitions"),
+        typer.Option(
+            "--config", "-c", help="YAML file or directory with custom domain definitions"
+        ),
     ] = None,
 ) -> None:
     """Enrich an OCEL 2.0 trace with LLM-generated content."""
@@ -201,7 +201,9 @@ def enrich_cmd(
         raise typer.Exit(1)
 
     if domain not in registry:
-        console.print(f"[red]Unknown domain '{domain}'. Use 'list-domains' to see available domains.[/red]")
+        console.print(
+            f"[red]Unknown domain '{domain}'. Use 'list-domains' to see available domains.[/red]"
+        )
         raise typer.Exit(1)
 
     scenario = get_scenario(domain, registry=registry)
@@ -240,7 +242,9 @@ def upload_cmd(
     ] = "open-agent-traces",
     config: Annotated[
         Path | None,
-        typer.Option("--config", "-c", help="YAML file or directory with custom domain definitions"),
+        typer.Option(
+            "--config", "-c", help="YAML file or directory with custom domain definitions"
+        ),
     ] = None,
 ) -> None:
     """Upload an enriched trace to Hugging Face Hub."""
@@ -280,6 +284,7 @@ def upload_cmd(
         tmp_path = Path(tmp_dir)
 
         from ocelgen.generation.engine import GenerationResult
+
         result = GenerationResult(
             log=log,
             template=PATTERN_REGISTRY[scenario.pattern]().build_template(),
@@ -308,15 +313,16 @@ def pipeline_cmd(
     domain: Annotated[
         str | None, typer.Option("--domain", "-d", help="Single domain to process")
     ] = None,
-    all_domains: Annotated[
-        bool, typer.Option("--all", help="Process all domains")
-    ] = False,
+    all_domains: Annotated[bool, typer.Option("--all", help="Process all domains")] = False,
     namespace: Annotated[str, typer.Option("--namespace", "-n", help="HF namespace")] = "",
     model: Annotated[
         str, typer.Option("--model", "-m", help="LLM model for enrichment")
     ] = "google/gemini-2.0-flash-001",
     base_url: Annotated[
-        str | None, typer.Option("--base-url", help="OpenAI-compatible API base URL (e.g. http://localhost:8080/v1)")
+        str | None,
+        typer.Option(
+            "--base-url", help="OpenAI-compatible API base URL (e.g. http://localhost:8080/v1)"
+        ),
     ] = None,
     collection: Annotated[
         str, typer.Option("--collection", help="Collection slug")
@@ -326,7 +332,9 @@ def pipeline_cmd(
     ] = False,
     config: Annotated[
         Path | None,
-        typer.Option("--config", "-c", help="YAML file or directory with custom domain definitions"),
+        typer.Option(
+            "--config", "-c", help="YAML file or directory with custom domain definitions"
+        ),
     ] = None,
 ) -> None:
     """End-to-end pipeline: generate, enrich, and upload agent trace datasets."""

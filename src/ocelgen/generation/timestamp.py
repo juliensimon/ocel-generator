@@ -33,7 +33,7 @@ class TimestampGenerator:
         """
         # Log-normal: if X ~ N(mu, sigma^2), then e^X ~ LogNormal
         # We want E[e^X] = mean_ms, so mu = ln(mean_ms) - sigma^2/2
-        mu = math.log(mean_ms) - (sigma ** 2) / 2.0
+        mu = math.log(mean_ms) - (sigma**2) / 2.0
         duration_ms = self._rng.lognormvariate(mu, sigma)
         self._current += timedelta(milliseconds=duration_ms)
         return self._current

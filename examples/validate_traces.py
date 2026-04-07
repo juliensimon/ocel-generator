@@ -8,6 +8,7 @@ Demonstrates four validation layers beyond JSON schema:
   4. Workflow conformance — conformant runs follow the normative template
 """
 
+from ocelgen.export.ocel_json import ocel_log_to_dict
 from ocelgen.generation.engine import generate
 from ocelgen.validation import (
     validate_ocel_dict,
@@ -16,7 +17,6 @@ from ocelgen.validation import (
     validate_type_attributes,
     validate_workflow_conformance,
 )
-from ocelgen.export.ocel_json import ocel_log_to_dict
 
 
 def main() -> None:
@@ -49,10 +49,7 @@ def main() -> None:
         # 4. Temporal ordering (conformant runs only)
         errors = validate_temporal_order(log)
         deviant_ids = {s.run_id for s in result.deviations}
-        conformant_errors = [
-            e for e in errors
-            if not any(rid in e for rid in deviant_ids)
-        ]
+        conformant_errors = [e for e in errors if not any(rid in e for rid in deviant_ids)]
         # Parallel patterns interleave sequence numbers by design
         if pattern == "parallel":
             conformant_errors = [e for e in conformant_errors if "sequence" not in e]

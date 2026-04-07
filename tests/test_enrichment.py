@@ -139,7 +139,6 @@ class TestPromptBuilder:
         assert "no tools" in user.lower() or "none" in user.lower() or "0" in user
 
 
-
 from ocelgen.enrichment.enricher import _extract_steps_from_log, enrich_log
 from ocelgen.export.ocel_json import ocel_log_to_dict
 from ocelgen.generation.engine import generate
@@ -208,7 +207,11 @@ class TestEnrichLog:
 
         mock_client = MagicMock()
         mock_client.generate.return_value = mock_response
-        mock_client.generate_queries.return_value = ["Test query one", "Test query two", "Test query three"]
+        mock_client.generate_queries.return_value = [
+            "Test query one",
+            "Test query two",
+            "Test query three",
+        ]
 
         enrich_log(result.log, scenario, client=mock_client)
 
@@ -237,11 +240,16 @@ class TestEnrichLog:
 
         mock_client = MagicMock()
         mock_client.generate.return_value = mock_response
-        mock_client.generate_queries.return_value = ["Test query one", "Test query two", "Test query three"]
+        mock_client.generate_queries.return_value = [
+            "Test query one",
+            "Test query two",
+            "Test query three",
+        ]
 
         enrich_log(result.log, scenario, client=mock_client)
 
         from ocelgen.validation.schema import validate_ocel_dict
+
         errors = validate_ocel_dict(ocel_log_to_dict(result.log))
         assert errors == [], f"OCEL validation failed after enrichment: {errors}"
 
@@ -253,10 +261,18 @@ class TestEnrichLog:
         mock_client.generate.return_value = {
             "reasoning": "ok",
             "llm_calls": [{"prompt": "p", "completion": "c"}, {"prompt": "p", "completion": "c"}],
-            "tool_calls": [{"input": {}, "output": {}}, {"input": {}, "output": {}}, {"input": {}, "output": {}}],
+            "tool_calls": [
+                {"input": {}, "output": {}},
+                {"input": {}, "output": {}},
+                {"input": {}, "output": {}},
+            ],
             "output_to_next_agent": "done",
         }
-        mock_client.generate_queries.return_value = ["Test query one", "Test query two", "Test query three"]
+        mock_client.generate_queries.return_value = [
+            "Test query one",
+            "Test query two",
+            "Test query three",
+        ]
 
         enrich_log(result.log, scenario, client=mock_client)
 
@@ -268,6 +284,7 @@ class TestEnrichLog:
 class TestTokenEstimation:
     def test_estimate_tokens(self) -> None:
         from ocelgen.enrichment.enricher import _estimate_tokens
+
         # ~1.3 tokens per word: 6 words -> ~7-8 tokens
         result = _estimate_tokens("hello world this is a test")
         assert 5 <= result <= 15
@@ -280,6 +297,7 @@ class TestTokenEstimation:
 class TestDeviationDetection:
     def test_detect_deviations_in_deviant_run(self) -> None:
         from ocelgen.enrichment.enricher import _detect_run_deviations
+
         result = generate("sequential", num_runs=20, noise_rate=1.0, seed=42)
         # With 100% noise, all runs should have deviations
         deviations = _detect_run_deviations(result.log, "run-0000")
@@ -287,6 +305,7 @@ class TestDeviationDetection:
 
     def test_detect_no_deviations_in_conformant_run(self) -> None:
         from ocelgen.enrichment.enricher import _detect_run_deviations
+
         result = generate("sequential", num_runs=1, noise_rate=0.0, seed=42)
         deviations = _detect_run_deviations(result.log, "run-0000")
         assert len(deviations) == 0
@@ -335,7 +354,10 @@ class TestRealisticTimestamps:
         mock_client.generate.return_value = {
             "reasoning": "Investigating the issue thoroughly.",
             "llm_calls": [
-                {"prompt": "Detailed prompt text here", "completion": "A reasonably long completion with multiple sentences about the topic."},
+                {
+                    "prompt": "Detailed prompt text here",
+                    "completion": "A reasonably long completion with multiple sentences about the topic.",
+                },
                 {"prompt": "Another prompt", "completion": "Another completion."},
             ],
             "tool_calls": [
@@ -345,13 +367,20 @@ class TestRealisticTimestamps:
             ],
             "output_to_next_agent": "Summary of findings.",
         }
-        mock_client.generate_queries.return_value = ["Test query one", "Test query two", "Test query three"]
+        mock_client.generate_queries.return_value = [
+            "Test query one",
+            "Test query two",
+            "Test query three",
+        ]
 
         enrich_log(result.log, scenario, client=mock_client)
 
         # Check that run spans more than 1 second total
-        run_events = [e for e in result.log.events
-                      if any(a.name == "run_id" and a.value == "run-0000" for a in e.attributes)]
+        run_events = [
+            e
+            for e in result.log.events
+            if any(a.name == "run_id" and a.value == "run-0000" for a in e.attributes)
+        ]
         if len(run_events) >= 2:
             first = run_events[0].time
             last = run_events[-1].time
@@ -379,7 +408,11 @@ class TestQueryExpansion:
         mock_client.generate.return_value = {
             "reasoning": "ok",
             "llm_calls": [{"prompt": "p", "completion": "c"}, {"prompt": "p", "completion": "c"}],
-            "tool_calls": [{"input": {}, "output": {}}, {"input": {}, "output": {}}, {"input": {}, "output": {}}],
+            "tool_calls": [
+                {"input": {}, "output": {}},
+                {"input": {}, "output": {}},
+                {"input": {}, "output": {}},
+            ],
             "output_to_next_agent": "done",
         }
         mock_client.generate_queries.return_value = ["q1", "q2", "q3", "q4", "q5"]

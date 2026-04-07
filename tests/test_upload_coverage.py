@@ -29,7 +29,9 @@ class TestUploadUnifiedDataset:
 
         assert url == "https://huggingface.co/datasets/testns/open-agent-traces"
         mock_api.create_repo.assert_called_once_with(
-            "testns/open-agent-traces", repo_type="dataset", exist_ok=True,
+            "testns/open-agent-traces",
+            repo_type="dataset",
+            exist_ok=True,
         )
         mock_api.upload_folder.assert_called_once()
 

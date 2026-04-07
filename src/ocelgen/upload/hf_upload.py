@@ -119,6 +119,7 @@ def prepare_upload_files(
     files.append(manifest_path)
 
     from ocelgen.upload.readme import generate_dataset_card
+
     readme_path = output_dir / "README.md"
     card = generate_dataset_card(
         scenarios=[scenario],

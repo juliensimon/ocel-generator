@@ -92,11 +92,13 @@ def _detect_run_deviations(log: OcelLog, run_id: str) -> list[dict]:
                 dev_type = a.value
             if a.name == "step_id":
                 step_id = a.value
-        deviations.append({
-            "type": dev_type or event.type,
-            "step_id": step_id,
-            "event_type": event.type,
-        })
+        deviations.append(
+            {
+                "type": dev_type or event.type,
+                "step_id": step_id,
+                "event_type": event.type,
+            }
+        )
     return deviations
 
 
@@ -120,7 +122,9 @@ def _build_deviation_context(deviations: list[dict], current_step_id: str) -> st
             lines.append(f"- Steps were REORDERED ({dev_type})")
         else:
             lines.append(f"- Deviation detected: {dev_type} (event: {d['event_type']})")
-    lines.append("Generate content that reflects these anomalies. Show confusion, errors, or inappropriate behavior.")
+    lines.append(
+        "Generate content that reflects these anomalies. Show confusion, errors, or inappropriate behavior."
+    )
     return "\n".join(lines)
 
 
@@ -253,15 +257,17 @@ def _extract_steps_from_log(log: OcelLog, run_id: str) -> list[dict]:
                             message_id = rel2.objectId
                             break
 
-        steps.append({
-            "agent_role": agent_role,
-            "invocation_id": invocation_id,
-            "llm_call_ids": llm_call_ids,
-            "tool_call_ids": tool_call_ids,
-            "message_id": message_id,
-            "expected_llm_calls": len(llm_call_ids),
-            "expected_tool_calls": len(tool_call_ids),
-        })
+        steps.append(
+            {
+                "agent_role": agent_role,
+                "invocation_id": invocation_id,
+                "llm_call_ids": llm_call_ids,
+                "tool_call_ids": tool_call_ids,
+                "message_id": message_id,
+                "expected_llm_calls": len(llm_call_ids),
+                "expected_tool_calls": len(tool_call_ids),
+            }
+        )
 
     return steps
 
@@ -410,10 +416,16 @@ def enrich_log(
                     if w_output:
                         worker_outputs.append(f"**{w_role}**: {w_output}")
                 if worker_outputs:
-                    effective_previous_output = "Results from parallel agents:\n\n" + "\n\n".join(worker_outputs)
+                    effective_previous_output = "Results from parallel agents:\n\n" + "\n\n".join(
+                        worker_outputs
+                    )
 
             # Improvement 3: Build deviation context for this step
-            step_id_for_dev = step.get("invocation_id", "").split("-inv-")[-1] if "-inv-" in step.get("invocation_id", "") else ""
+            step_id_for_dev = (
+                step.get("invocation_id", "").split("-inv-")[-1]
+                if "-inv-" in step.get("invocation_id", "")
+                else ""
+            )
             deviation_context = _build_deviation_context(deviations, step_id_for_dev)
 
             system_prompt, user_prompt = build_enrichment_prompt(
@@ -453,8 +465,12 @@ def enrich_log(
             for i, tool_id in enumerate(step["tool_call_ids"]):
                 tool_obj = _get_object(log, tool_id)
                 if tool_obj and i < len(resp.tool_calls):
-                    _patch_attribute(tool_obj, "tool_input", json.dumps(resp.tool_calls[i].get("input", {})))
-                    _patch_attribute(tool_obj, "tool_output", json.dumps(resp.tool_calls[i].get("output", {})))
+                    _patch_attribute(
+                        tool_obj, "tool_input", json.dumps(resp.tool_calls[i].get("input", {}))
+                    )
+                    _patch_attribute(
+                        tool_obj, "tool_output", json.dumps(resp.tool_calls[i].get("output", {}))
+                    )
 
             if step["message_id"]:
                 msg_obj = _get_object(log, step["message_id"])

@@ -43,16 +43,12 @@ def validate_referential_integrity(log: OcelLog) -> list[str]:
     # Check event types are declared
     for event in log.events:
         if event.type not in event_type_names:
-            errors.append(
-                f"Event '{event.id}' has undeclared type '{event.type}'"
-            )
+            errors.append(f"Event '{event.id}' has undeclared type '{event.type}'")
 
     # Check object types are declared
     for obj in log.objects:
         if obj.type not in object_type_names:
-            errors.append(
-                f"Object '{obj.id}' has undeclared type '{obj.type}'"
-            )
+            errors.append(f"Object '{obj.id}' has undeclared type '{obj.type}'")
 
     # Check event relationship targets exist
     for event in log.events:
@@ -106,12 +102,12 @@ def validate_type_attributes(log: OcelLog) -> list[str]:
 
     # Check object attributes
     for obj in log.objects:
-        declared = object_type_attrs.get(obj.type, set())
-        for attr in obj.attributes:
-            if attr.name not in declared:
+        declared_obj = object_type_attrs.get(obj.type, set())
+        for obj_attr in obj.attributes:
+            if obj_attr.name not in declared_obj:
                 errors.append(
                     f"Object '{obj.id}' (type '{obj.type}') has "
-                    f"undeclared attribute '{attr.name}'"
+                    f"undeclared attribute '{obj_attr.name}'"
                 )
 
     return errors

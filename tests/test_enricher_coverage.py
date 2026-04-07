@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from unittest.mock import MagicMock
 
 from ocelgen.enrichment.enricher import (
     _build_deviation_context,
     _detect_parallel_groups,
-    _detect_run_deviations,
     _get_object,
     _get_tool_names_for_step,
     _patch_attribute,
@@ -15,7 +15,7 @@ from ocelgen.enrichment.enricher import (
     enrich_log,
 )
 from ocelgen.generation.engine import generate
-from ocelgen.models.ocel import OcelLog, OcelObject, OcelObjectAttribute
+from ocelgen.models.ocel import OcelObject, OcelObjectAttribute
 from ocelgen.scenarios.domain import DomainScenario
 
 
@@ -154,26 +154,26 @@ class TestGetObject:
 
 class TestPatchAttribute:
     def test_patches_existing_attribute(self) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         obj = OcelObject(
             id="test-obj",
             type="agent",
             attributes=[
-                OcelObjectAttribute(name="role", value="old", time=datetime.now(timezone.utc)),
+                OcelObjectAttribute(name="role", value="old", time=datetime.now(UTC)),
             ],
         )
         _patch_attribute(obj, "role", "new")
         assert obj.attributes[0].value == "new"
 
     def test_adds_new_attribute(self) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         obj = OcelObject(
             id="test-obj",
             type="agent",
             attributes=[
-                OcelObjectAttribute(name="role", value="researcher", time=datetime.now(timezone.utc)),
+                OcelObjectAttribute(name="role", value="researcher", time=datetime.now(UTC)),
             ],
         )
         _patch_attribute(obj, "reasoning", "some reasoning")
@@ -182,26 +182,26 @@ class TestPatchAttribute:
         assert obj.attributes[1].value == "some reasoning"
 
     def test_coerces_dict_value_to_json(self) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         obj = OcelObject(
             id="test-obj",
             type="tool_call",
             attributes=[
-                OcelObjectAttribute(name="input", value="{}", time=datetime.now(timezone.utc)),
+                OcelObjectAttribute(name="input", value="{}", time=datetime.now(UTC)),
             ],
         )
         _patch_attribute(obj, "input", {"key": "value"})
         assert obj.attributes[0].value == '{"key": "value"}'
 
     def test_coerces_none_to_empty_string(self) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         obj = OcelObject(
             id="test-obj",
             type="agent",
             attributes=[
-                OcelObjectAttribute(name="output", value="old", time=datetime.now(timezone.utc)),
+                OcelObjectAttribute(name="output", value="old", time=datetime.now(UTC)),
             ],
         )
         _patch_attribute(obj, "output", None)
@@ -218,7 +218,8 @@ class TestRewriteTimestamps:
         result = generate("sequential", num_runs=1, noise_rate=0.0, seed=42)
         _rewrite_timestamps(result.log, "run-0000")
         run_events = [
-            e for e in result.log.events
+            e
+            for e in result.log.events
             if any(a.name == "run_id" and a.value == "run-0000" for a in e.attributes)
         ]
         times = [e.time for e in run_events]

@@ -239,16 +239,18 @@ class RunSimulator:
         log.add_object(task_obj)
 
         # run_started event
-        log.add_event(OcelEvent(
-            id=self._next_event_id(),
-            type="run_started",
-            time=self.ts.advance(mean_ms=10),
-            attributes=_base_event_attrs(self.run_id, self._next_seq()),
-            relationships=[
-                OcelRelationship(objectId=self.run_id, qualifier="started"),
-                OcelRelationship(objectId=task_id, qualifier="root_task"),
-            ],
-        ))
+        log.add_event(
+            OcelEvent(
+                id=self._next_event_id(),
+                type="run_started",
+                time=self.ts.advance(mean_ms=10),
+                attributes=_base_event_attrs(self.run_id, self._next_seq()),
+                relationships=[
+                    OcelRelationship(objectId=self.run_id, qualifier="started"),
+                    OcelRelationship(objectId=task_id, qualifier="root_task"),
+                ],
+            )
+        )
 
         # Walk steps, handling parallel groups and supervisor routing
         ordered_steps = self.template.topological_order()
@@ -271,10 +273,7 @@ class RunSimulator:
 
             # Check if this step is a supervisor routing to workers
             successors = self.template.successors(step.id)
-            is_supervisor_step = (
-                step.agent_role == AgentRole.SUPERVISOR
-                and len(successors) > 1
-            )
+            is_supervisor_step = step.agent_role == AgentRole.SUPERVISOR and len(successors) > 1
 
             self._simulate_step(log, step, prev_step)
 
@@ -287,15 +286,17 @@ class RunSimulator:
             i += 1
 
         # run_completed event
-        log.add_event(OcelEvent(
-            id=self._next_event_id(),
-            type="run_completed",
-            time=self.ts.advance(mean_ms=10),
-            attributes=_base_event_attrs(self.run_id, self._next_seq()),
-            relationships=[
-                OcelRelationship(objectId=self.run_id, qualifier="completed"),
-            ],
-        ))
+        log.add_event(
+            OcelEvent(
+                id=self._next_event_id(),
+                type="run_completed",
+                time=self.ts.advance(mean_ms=10),
+                attributes=_base_event_attrs(self.run_id, self._next_seq()),
+                relationships=[
+                    OcelRelationship(objectId=self.run_id, qualifier="completed"),
+                ],
+            )
+        )
 
         return log
 
@@ -327,19 +328,22 @@ class RunSimulator:
         total_cost = 0.0
 
         # agent_invoked event
-        log.add_event(OcelEvent(
-            id=self._next_event_id(),
-            type="agent_invoked",
-            time=self.ts.advance(mean_ms=50),
-            attributes=_base_event_attrs(self.run_id, self._next_seq()) + [
-                OcelEventAttribute(name="step_id", value=step.id),
-            ],
-            relationships=[
-                OcelRelationship(objectId=self.run_id, qualifier="part_of"),
-                OcelRelationship(objectId=agent_id, qualifier="invoked"),
-                OcelRelationship(objectId=invocation_id, qualifier="started"),
-            ],
-        ))
+        log.add_event(
+            OcelEvent(
+                id=self._next_event_id(),
+                type="agent_invoked",
+                time=self.ts.advance(mean_ms=50),
+                attributes=_base_event_attrs(self.run_id, self._next_seq())
+                + [
+                    OcelEventAttribute(name="step_id", value=step.id),
+                ],
+                relationships=[
+                    OcelRelationship(objectId=self.run_id, qualifier="part_of"),
+                    OcelRelationship(objectId=agent_id, qualifier="invoked"),
+                    OcelRelationship(objectId=invocation_id, qualifier="started"),
+                ],
+            )
+        )
 
         # Generate inter-agent message if there was a previous step
         if prev_step is not None:
@@ -372,28 +376,32 @@ class RunSimulator:
             log.add_object(llm_obj)
 
             # llm_request_sent
-            log.add_event(OcelEvent(
-                id=self._next_event_id(),
-                type="llm_request_sent",
-                time=self.ts.advance(mean_ms=20),
-                attributes=_base_event_attrs(self.run_id, self._next_seq()),
-                relationships=[
-                    OcelRelationship(objectId=invocation_id, qualifier="triggered_by"),
-                    OcelRelationship(objectId=llm_call_id, qualifier="started"),
-                ],
-            ))
+            log.add_event(
+                OcelEvent(
+                    id=self._next_event_id(),
+                    type="llm_request_sent",
+                    time=self.ts.advance(mean_ms=20),
+                    attributes=_base_event_attrs(self.run_id, self._next_seq()),
+                    relationships=[
+                        OcelRelationship(objectId=invocation_id, qualifier="triggered_by"),
+                        OcelRelationship(objectId=llm_call_id, qualifier="started"),
+                    ],
+                )
+            )
 
             # llm_response_received
-            log.add_event(OcelEvent(
-                id=self._next_event_id(),
-                type="llm_response_received",
-                time=self.ts.advance(mean_ms=float(attrs.latency_ms)),
-                attributes=_base_event_attrs(self.run_id, self._next_seq()),
-                relationships=[
-                    OcelRelationship(objectId=invocation_id, qualifier="triggered_by"),
-                    OcelRelationship(objectId=llm_call_id, qualifier="completed"),
-                ],
-            ))
+            log.add_event(
+                OcelEvent(
+                    id=self._next_event_id(),
+                    type="llm_response_received",
+                    time=self.ts.advance(mean_ms=float(attrs.latency_ms)),
+                    attributes=_base_event_attrs(self.run_id, self._next_seq()),
+                    relationships=[
+                        OcelRelationship(objectId=invocation_id, qualifier="triggered_by"),
+                        OcelRelationship(objectId=llm_call_id, qualifier="completed"),
+                    ],
+                )
+            )
 
         # Tool calls
         for i in range(step.expected_tool_calls):
@@ -424,28 +432,32 @@ class RunSimulator:
             log.add_object(tool_obj)
 
             # tool_called
-            log.add_event(OcelEvent(
-                id=self._next_event_id(),
-                type="tool_called",
-                time=self.ts.advance(mean_ms=20),
-                attributes=_base_event_attrs(self.run_id, self._next_seq()),
-                relationships=[
-                    OcelRelationship(objectId=invocation_id, qualifier="triggered_by"),
-                    OcelRelationship(objectId=tool_call_id, qualifier="started"),
-                ],
-            ))
+            log.add_event(
+                OcelEvent(
+                    id=self._next_event_id(),
+                    type="tool_called",
+                    time=self.ts.advance(mean_ms=20),
+                    attributes=_base_event_attrs(self.run_id, self._next_seq()),
+                    relationships=[
+                        OcelRelationship(objectId=invocation_id, qualifier="triggered_by"),
+                        OcelRelationship(objectId=tool_call_id, qualifier="started"),
+                    ],
+                )
+            )
 
             # tool_returned
-            log.add_event(OcelEvent(
-                id=self._next_event_id(),
-                type="tool_returned",
-                time=self.ts.advance(mean_ms=float(tool_attrs.duration_ms)),
-                attributes=_base_event_attrs(self.run_id, self._next_seq()),
-                relationships=[
-                    OcelRelationship(objectId=invocation_id, qualifier="triggered_by"),
-                    OcelRelationship(objectId=tool_call_id, qualifier="completed"),
-                ],
-            ))
+            log.add_event(
+                OcelEvent(
+                    id=self._next_event_id(),
+                    type="tool_returned",
+                    time=self.ts.advance(mean_ms=float(tool_attrs.duration_ms)),
+                    attributes=_base_event_attrs(self.run_id, self._next_seq()),
+                    relationships=[
+                        OcelRelationship(objectId=invocation_id, qualifier="triggered_by"),
+                        OcelRelationship(objectId=tool_call_id, qualifier="completed"),
+                    ],
+                )
+            )
 
         # Create agent_invocation object with accumulated stats
         inv_obj = OcelObject(
@@ -467,18 +479,21 @@ class RunSimulator:
         log.add_object(inv_obj)
 
         # agent_completed event
-        log.add_event(OcelEvent(
-            id=self._next_event_id(),
-            type="agent_completed",
-            time=self.ts.advance(mean_ms=20),
-            attributes=_base_event_attrs(self.run_id, self._next_seq()) + [
-                OcelEventAttribute(name="step_id", value=step.id),
-            ],
-            relationships=[
-                OcelRelationship(objectId=self.run_id, qualifier="part_of"),
-                OcelRelationship(objectId=invocation_id, qualifier="completed"),
-            ],
-        ))
+        log.add_event(
+            OcelEvent(
+                id=self._next_event_id(),
+                type="agent_completed",
+                time=self.ts.advance(mean_ms=20),
+                attributes=_base_event_attrs(self.run_id, self._next_seq())
+                + [
+                    OcelEventAttribute(name="step_id", value=step.id),
+                ],
+                relationships=[
+                    OcelRelationship(objectId=self.run_id, qualifier="part_of"),
+                    OcelRelationship(objectId=invocation_id, qualifier="completed"),
+                ],
+            )
+        )
 
     def _simulate_parallel_group(
         self,
@@ -530,16 +545,18 @@ class RunSimulator:
     ) -> None:
         """Emit a routing_decided event from supervisor to target worker."""
         target_agent_id = f"agent-{target_step.agent_role.value}"
-        log.add_event(OcelEvent(
-            id=self._next_event_id(),
-            type="routing_decided",
-            time=self.ts.advance(mean_ms=20),
-            attributes=_base_event_attrs(self.run_id, self._next_seq()),
-            relationships=[
-                OcelRelationship(objectId=self.run_id, qualifier="part_of"),
-                OcelRelationship(objectId=target_agent_id, qualifier="selected"),
-            ],
-        ))
+        log.add_event(
+            OcelEvent(
+                id=self._next_event_id(),
+                type="routing_decided",
+                time=self.ts.advance(mean_ms=20),
+                attributes=_base_event_attrs(self.run_id, self._next_seq()),
+                relationships=[
+                    OcelRelationship(objectId=self.run_id, qualifier="part_of"),
+                    OcelRelationship(objectId=target_agent_id, qualifier="selected"),
+                ],
+            )
+        )
 
     def _simulate_message(
         self,
@@ -565,15 +582,17 @@ class RunSimulator:
         sender_agent_id = f"agent-{sender_step.agent_role.value}"
         receiver_agent_id = f"agent-{receiver_step.agent_role.value}"
 
-        log.add_event(OcelEvent(
-            id=self._next_event_id(),
-            type="message_sent",
-            time=self.ts.advance(mean_ms=30),
-            attributes=_base_event_attrs(self.run_id, self._next_seq()),
-            relationships=[
-                OcelRelationship(objectId=self.run_id, qualifier="part_of"),
-                OcelRelationship(objectId=msg_id, qualifier="sent"),
-                OcelRelationship(objectId=sender_agent_id, qualifier="sender"),
-                OcelRelationship(objectId=receiver_agent_id, qualifier="receiver"),
-            ],
-        ))
+        log.add_event(
+            OcelEvent(
+                id=self._next_event_id(),
+                type="message_sent",
+                time=self.ts.advance(mean_ms=30),
+                attributes=_base_event_attrs(self.run_id, self._next_seq()),
+                relationships=[
+                    OcelRelationship(objectId=self.run_id, qualifier="part_of"),
+                    OcelRelationship(objectId=msg_id, qualifier="sent"),
+                    OcelRelationship(objectId=sender_agent_id, qualifier="sender"),
+                    OcelRelationship(objectId=receiver_agent_id, qualifier="receiver"),
+                ],
+            )
+        )

@@ -56,16 +56,16 @@ def build_enrichment_prompt(
         f"{tools_section}\n\n"
         f"Generate exactly {expected_llm_calls} LLM call(s) and {expected_tool_calls} tool call(s).\n\n"
         f"Respond as JSON with this exact structure:\n"
-        f'{{\n'
+        f"{{\n"
         f'  "reasoning": "Your chain-of-thought reasoning (2-4 sentences)",\n'
         f'  "llm_calls": [\n'
         f'    {{"prompt": "The prompt sent to the LLM", "completion": "The LLM response"}}\n'
-        f'  ],\n'
+        f"  ],\n"
         f'  "tool_calls": [\n'
         f'    {{"input": {{"arg": "value"}}, "output": {{"result": "value"}}}}\n'
-        f'  ],\n'
+        f"  ],\n"
         f'  "output_to_next_agent": "Summary output passed to the next agent in the chain"\n'
-        f'}}'
+        f"}}"
     )
 
     return system_prompt, user_prompt

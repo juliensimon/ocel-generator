@@ -17,9 +17,10 @@ import json
 
 import pytest
 
-pm4py = pytest.importorskip("pm4py", reason="pm4py not installed (install with: uv sync --extra conformance)")
+pm4py = pytest.importorskip(
+    "pm4py", reason="pm4py not installed (install with: uv sync --extra conformance)"
+)
 
-from pathlib import Path
 
 from huggingface_hub import hf_hub_download
 from pydantic import TypeAdapter
@@ -136,8 +137,7 @@ class TestTemporalOrder:
         for obj in log.objects:
             if obj.type == "run":
                 is_conformant = any(
-                    a.name == "is_conformant" and a.value == "true"
-                    for a in obj.attributes
+                    a.name == "is_conformant" and a.value == "true" for a in obj.attributes
                 )
                 if not is_conformant:
                     deviant_run_ids.add(obj.id)
@@ -145,20 +145,14 @@ class TestTemporalOrder:
         errors = validate_temporal_order(log)
 
         # Filter out violations from deviant runs — they're expected
-        conformant_errors = [
-            e for e in errors
-            if not any(rid in e for rid in deviant_run_ids)
-        ]
+        conformant_errors = [e for e in errors if not any(rid in e for rid in deviant_run_ids)]
 
         # Parallel patterns interleave sequence numbers across workers
         if scenario.pattern == "parallel":
-            conformant_errors = [
-                e for e in conformant_errors if "sequence" not in e
-            ]
+            conformant_errors = [e for e in conformant_errors if "sequence" not in e]
 
         assert conformant_errors == [], (
-            f"{domain} temporal errors in conformant runs:\n"
-            + "\n".join(conformant_errors)
+            f"{domain} temporal errors in conformant runs:\n" + "\n".join(conformant_errors)
         )
 
 
@@ -200,8 +194,7 @@ class TestPM4PyRoundTrip:
         ocel = pm4py.read.read_ocel2_json(path)
 
         assert len(ocel.events) == len(data["events"]), (
-            f"{domain}: pm4py read {len(ocel.events)} events, "
-            f"expected {len(data['events'])}"
+            f"{domain}: pm4py read {len(ocel.events)} events, expected {len(data['events'])}"
         )
 
     @pytest.mark.parametrize("domain", _ALL_DOMAINS)
@@ -263,12 +256,31 @@ class TestCrossDomain:
         ds = load_dataset(REPO_ID, "customer-support-triage")
         columns = set(ds["train"].column_names)
         expected = {
-            "event_id", "event_type", "timestamp", "run_id",
-            "sequence_number", "is_deviation", "deviation_type", "step_id",
-            "agent_role", "model_name", "prompt", "completion",
-            "tool_name", "tool_input", "tool_output", "message_content",
-            "reasoning", "input_tokens", "output_tokens", "latency_ms",
-            "cost_usd", "is_conformant", "pattern", "domain", "user_query",
+            "event_id",
+            "event_type",
+            "timestamp",
+            "run_id",
+            "sequence_number",
+            "is_deviation",
+            "deviation_type",
+            "step_id",
+            "agent_role",
+            "model_name",
+            "prompt",
+            "completion",
+            "tool_name",
+            "tool_input",
+            "tool_output",
+            "message_content",
+            "reasoning",
+            "input_tokens",
+            "output_tokens",
+            "latency_ms",
+            "cost_usd",
+            "is_conformant",
+            "pattern",
+            "domain",
+            "user_query",
         }
         assert columns == expected, f"Missing: {expected - columns}, Extra: {columns - expected}"
 
@@ -288,13 +300,13 @@ class TestCrossDomain:
             # Check run counts match
             run_objs = [o for o in log.objects if o.type == "run"]
             assert len(run_objs) == manifest["total_runs"], (
-                f"{domain}: {len(run_objs)} run objects vs "
-                f"{manifest['total_runs']} in manifest"
+                f"{domain}: {len(run_objs)} run objects vs {manifest['total_runs']} in manifest"
             )
 
             # Check conformant/deviant split
             conformant_in_log = sum(
-                1 for o in run_objs
+                1
+                for o in run_objs
                 if any(a.name == "is_conformant" and a.value == "true" for a in o.attributes)
             )
             assert conformant_in_log == manifest["conformant_runs"], (
@@ -318,8 +330,7 @@ class TestCrossDomain:
             expected = template.to_dict()
 
             assert model["name"] == expected["name"], (
-                f"{domain}: normative model name '{model['name']}' "
-                f"!= expected '{expected['name']}'"
+                f"{domain}: normative model name '{model['name']}' != expected '{expected['name']}'"
             )
             assert len(model["steps"]) == len(expected["steps"]), (
                 f"{domain}: {len(model['steps'])} steps in normative model "

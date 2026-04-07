@@ -86,10 +86,7 @@ def validate_workflow_conformance(log: OcelLog, template: WorkflowTemplate) -> l
     for obj in log.objects:
         if obj.type != "run":
             continue
-        is_conformant = any(
-            a.name == "is_conformant" and a.value == "true"
-            for a in obj.attributes
-        )
+        is_conformant = any(a.name == "is_conformant" and a.value == "true" for a in obj.attributes)
         if is_conformant:
             conformant_run_ids.add(obj.id)
 
@@ -97,7 +94,8 @@ def validate_workflow_conformance(log: OcelLog, template: WorkflowTemplate) -> l
         # Extract agent_invoked events for this run, sorted by time
         invoked_events = sorted(
             [
-                e for e in log.events
+                e
+                for e in log.events
                 if e.type == "agent_invoked"
                 and any(a.name == "run_id" and a.value == run_id for a in e.attributes)
             ],
@@ -122,8 +120,7 @@ def validate_workflow_conformance(log: OcelLog, template: WorkflowTemplate) -> l
         # Check step count matches
         if len(actual_roles) != expected_count:
             errors.append(
-                f"Run '{run_id}': expected {expected_count} steps, "
-                f"got {len(actual_roles)}"
+                f"Run '{run_id}': expected {expected_count} steps, got {len(actual_roles)}"
             )
             continue
 
@@ -170,9 +167,7 @@ def validate_workflow_conformance(log: OcelLog, template: WorkflowTemplate) -> l
         for event in log.events:
             if event.type != "agent_completed":
                 continue
-            is_this_run = any(
-                a.name == "run_id" and a.value == run_id for a in event.attributes
-            )
+            is_this_run = any(a.name == "run_id" and a.value == run_id for a in event.attributes)
             if is_this_run:
                 for attr in event.attributes:
                     if attr.name == "step_id":
@@ -180,9 +175,6 @@ def validate_workflow_conformance(log: OcelLog, template: WorkflowTemplate) -> l
 
         for step in expected_steps:
             if step.id not in completed_step_ids:
-                errors.append(
-                    f"Run '{run_id}': step '{step.id}' was invoked but "
-                    f"never completed"
-                )
+                errors.append(f"Run '{run_id}': step '{step.id}' was invoked but never completed")
 
     return errors

@@ -90,7 +90,8 @@ class TestInsertedActivity:
         rng = random.Random(99)
         InsertedActivityStrategy().apply(log, "run-0000", template, rng)
         deviant_events = [
-            e for e in log.events
+            e
+            for e in log.events
             if any(a.name == "is_deviation" and a.value == "true" for a in e.attributes)
         ]
         assert len(deviant_events) >= 2  # invoked + completed

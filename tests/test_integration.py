@@ -36,6 +36,7 @@ class TestEngine:
 
     def test_unknown_pattern_raises(self) -> None:
         import pytest
+
         with pytest.raises(ValueError, match="Unknown pattern"):
             generate("nonexistent", num_runs=1)
 
@@ -101,9 +102,7 @@ class TestManifest:
         manifest = build_manifest(result)
 
         # Runs marked deviant in manifest
-        manifest_deviant_ids = {
-            r["run_id"] for r in manifest["runs"] if not r["is_conformant"]
-        }
+        manifest_deviant_ids = {r["run_id"] for r in manifest["runs"] if not r["is_conformant"]}
 
         # Runs with is_deviation=true events in the log
         log_deviant_ids = set()
@@ -172,7 +171,9 @@ class TestEnrichmentPipeline:
 
         # Verify enrichment happened
         llm_objs = [o for o in result.log.objects if o.type == "llm_call"]
-        enriched = [o for o in llm_objs if any(a.name == "prompt" and a.value for a in o.attributes)]
+        enriched = [
+            o for o in llm_objs if any(a.name == "prompt" and a.value for a in o.attributes)
+        ]
         assert len(enriched) > 0
 
         # Flatten
@@ -208,9 +209,14 @@ class TestEnrichmentPipeline:
         assert len(rows) == len(result.log.events)
 
         files = prepare_upload_files(
-            rows=rows, log=result.log, template=result.template,
-            result=result, scenario=scenario, namespace="test",
-            output_dir=tmp_path, seed=scenario.seed,
+            rows=rows,
+            log=result.log,
+            template=result.template,
+            result=result,
+            scenario=scenario,
+            namespace="test",
+            output_dir=tmp_path,
+            seed=scenario.seed,
         )
         assert len(files) == 5
 
@@ -224,9 +230,14 @@ class TestEnrichmentPipeline:
         assert len(rows) == len(result.log.events)
 
         files = prepare_upload_files(
-            rows=rows, log=result.log, template=result.template,
-            result=result, scenario=scenario, namespace="test",
-            output_dir=tmp_path, seed=scenario.seed,
+            rows=rows,
+            log=result.log,
+            template=result.template,
+            result=result,
+            scenario=scenario,
+            namespace="test",
+            output_dir=tmp_path,
+            seed=scenario.seed,
         )
         assert len(files) == 5
 
@@ -235,7 +246,10 @@ class TestEnrichmentPipeline:
         client = self._mock_client()
         for name, scenario in SCENARIO_REGISTRY.items():
             result = generate(
-                scenario.pattern, num_runs=2, noise_rate=scenario.noise, seed=scenario.seed,
+                scenario.pattern,
+                num_runs=2,
+                noise_rate=scenario.noise,
+                seed=scenario.seed,
             )
             enrich_log(result.log, scenario, client=client)
             rows = flatten_log(result.log, domain=name)

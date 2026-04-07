@@ -54,9 +54,7 @@ def generate_llm_attributes(rng: random.Random, model: LLMModel) -> LLMCallAttri
     token_latency = output_tokens * rng.uniform(1.5, 3.0)
     latency_ms = max(100, int(base_latency + token_latency))
 
-    input_cost, output_cost = _COST_PER_1K.get(
-        model.value, (0.003, 0.015)
-    )
+    input_cost, output_cost = _COST_PER_1K.get(model.value, (0.003, 0.015))
     cost = (input_tokens / 1000) * input_cost + (output_tokens / 1000) * output_cost
 
     return LLMCallAttributes(

@@ -8,7 +8,9 @@ Checks causal ordering constraints specific to agent traces:
 
 from __future__ import annotations
 
-from ocelgen.models.ocel import OcelLog
+from datetime import datetime
+
+from ocelgen.models.ocel import OcelEvent, OcelLog
 
 # Event pairs where the first must occur before the second
 _CAUSAL_PAIRS: list[tuple[str, str, str]] = [
@@ -27,7 +29,7 @@ def validate_temporal_order(log: OcelLog) -> list[str]:
     errors: list[str] = []
 
     # Group events by run_id
-    events_by_run: dict[str, list] = {}
+    events_by_run: dict[str, list[OcelEvent]] = {}
     for event in log.events:
         run_id = ""
         for attr in event.attributes:
@@ -44,8 +46,7 @@ def validate_temporal_order(log: OcelLog) -> list[str]:
         # Check run_started is first
         if sorted_events and sorted_events[0].type != "run_started":
             errors.append(
-                f"Run '{run_id}': first event is '{sorted_events[0].type}', "
-                f"expected 'run_started'"
+                f"Run '{run_id}': first event is '{sorted_events[0].type}', expected 'run_started'"
             )
 
         # Check run_completed is last
@@ -56,7 +57,7 @@ def validate_temporal_order(log: OcelLog) -> list[str]:
             )
 
         # Check sequence_number monotonicity
-        seq_numbers = []
+        seq_numbers: list[int] = []
         for event in sorted_events:
             for attr in event.attributes:
                 if attr.name == "sequence_number":
@@ -72,16 +73,15 @@ def validate_temporal_order(log: OcelLog) -> list[str]:
                 )
 
         # Check causal pairs via shared object relationships
-        # Build a map: (event_type, objectId) -> event time
         _check_causal_pairs(run_id, sorted_events, errors)
 
     return errors
 
 
-def _check_causal_pairs(run_id: str, events: list, errors: list[str]) -> None:
+def _check_causal_pairs(run_id: str, events: list[OcelEvent], errors: list[str]) -> None:
     """Check that paired events (request/response) respect causal order."""
-    # Map: objectId -> {qualifier: (event_id, time)}
-    object_events: dict[str, dict[str, list[tuple[str, object]]]] = {}
+    # Map: objectId -> {qualifier: [(event_id, time)]}
+    object_events: dict[str, dict[str, list[tuple[str, datetime]]]] = {}
 
     for event in events:
         for rel in event.relationships:
@@ -103,6 +103,5 @@ def _check_causal_pairs(run_id: str, events: list, errors: list[str]) -> None:
             earliest_complete = min(t for _, t in completed)
             if earliest_complete < earliest_start:
                 errors.append(
-                    f"Run '{run_id}': object '{obj_id}' was completed "
-                    f"before it was started"
+                    f"Run '{run_id}': object '{obj_id}' was completed before it was started"
                 )

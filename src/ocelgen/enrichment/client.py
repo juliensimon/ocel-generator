@@ -73,7 +73,9 @@ class LLMClient:
         self.model = model
         self._client = OpenAI(api_key=api_key or "local", base_url=base_url)
 
-    def generate_queries(self, seed_queries: list[str], domain_description: str, count: int) -> list[str]:
+    def generate_queries(
+        self, seed_queries: list[str], domain_description: str, count: int
+    ) -> list[str]:
         """Generate diverse user queries by expanding from seed examples.
 
         Calls the LLM once with all seed queries and asks it to produce
@@ -82,7 +84,7 @@ class LLMClient:
         system_prompt = (
             "You are a query generator. Given a domain description and example queries, "
             "generate new, unique, diverse queries in the same style. "
-            "Respond with valid JSON only: {\"queries\": [\"query1\", \"query2\", ...]}"
+            'Respond with valid JSON only: {"queries": ["query1", "query2", ...]}'
         )
         seed_list = "\n".join(f"- {q}" for q in seed_queries)
         user_prompt = (
@@ -122,8 +124,6 @@ class LLMClient:
             except Exception as e:
                 last_error = e
                 if attempt < MAX_RETRIES - 1:
-                    time.sleep(2 ** attempt)
+                    time.sleep(2**attempt)
 
-        raise RuntimeError(
-            f"LLM call failed after {MAX_RETRIES} attempts: {last_error}"
-        )
+        raise RuntimeError(f"LLM call failed after {MAX_RETRIES} attempts: {last_error}")

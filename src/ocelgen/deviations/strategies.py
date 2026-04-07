@@ -179,32 +179,36 @@ class InsertedActivityStrategy(DeviationStrategy):
         base_time = ref_event.time + timedelta(milliseconds=rng.randint(50, 200))
 
         # Create a spurious extra step
-        extra_inv_id = f"{run_id}-inv-extra-{rng.randint(1000,9999)}"
+        extra_inv_id = f"{run_id}-inv-extra-{rng.randint(1000, 9999)}"
         extra_agent_id = "agent-reviewer"  # an agent not in the template
 
         # Ensure agent object exists
-        log.add_object(OcelObject(
-            id=extra_agent_id,
-            type="agent",
-            attributes=[
-                OcelObjectAttribute(name="role", value="reviewer", time=base_time),
-                OcelObjectAttribute(
-                    name="model_name",
-                    value=LLMModel.GPT4O_MINI.value,
-                    time=base_time,
-                ),
-            ],
-        ))
-        log.add_object(OcelObject(
-            id=extra_inv_id,
-            type="agent_invocation",
-            attributes=[
-                OcelObjectAttribute(name="status", value="completed", time=base_time),
-                OcelObjectAttribute(name="input_tokens", value="200", time=base_time),
-                OcelObjectAttribute(name="output_tokens", value="100", time=base_time),
-                OcelObjectAttribute(name="cost_usd", value="0.001", time=base_time),
-            ],
-        ))
+        log.add_object(
+            OcelObject(
+                id=extra_agent_id,
+                type="agent",
+                attributes=[
+                    OcelObjectAttribute(name="role", value="reviewer", time=base_time),
+                    OcelObjectAttribute(
+                        name="model_name",
+                        value=LLMModel.GPT4O_MINI.value,
+                        time=base_time,
+                    ),
+                ],
+            )
+        )
+        log.add_object(
+            OcelObject(
+                id=extra_inv_id,
+                type="agent_invocation",
+                attributes=[
+                    OcelObjectAttribute(name="status", value="completed", time=base_time),
+                    OcelObjectAttribute(name="input_tokens", value="200", time=base_time),
+                    OcelObjectAttribute(name="output_tokens", value="100", time=base_time),
+                    OcelObjectAttribute(name="cost_usd", value="0.001", time=base_time),
+                ],
+            )
+        )
 
         # Find max sequence number for this run
         max_seq = 0
@@ -222,7 +226,7 @@ class InsertedActivityStrategy(DeviationStrategy):
                 OcelEventAttribute(name="step_id", value="extra"),
             ]
 
-        evt_id_base = f"{run_id}-dev-ins-{rng.randint(1000,9999)}"
+        evt_id_base = f"{run_id}-dev-ins-{rng.randint(1000, 9999)}"
         invoked_evt = OcelEvent(
             id=f"{evt_id_base}-invoked",
             type="agent_invoked",
@@ -289,16 +293,18 @@ class WrongResourceStrategy(DeviationStrategy):
         new_agent_id = f"agent-{new_role.value}"
 
         # Ensure new agent object exists
-        log.add_object(OcelObject(
-            id=new_agent_id,
-            type="agent",
-            attributes=[
-                OcelObjectAttribute(name="role", value=new_role.value, time=target_event.time),
-                OcelObjectAttribute(
-                    name="model_name", value=LLMModel.GPT4O.value, time=target_event.time
-                ),
-            ],
-        ))
+        log.add_object(
+            OcelObject(
+                id=new_agent_id,
+                type="agent",
+                attributes=[
+                    OcelObjectAttribute(name="role", value=new_role.value, time=target_event.time),
+                    OcelObjectAttribute(
+                        name="model_name", value=LLMModel.GPT4O.value, time=target_event.time
+                    ),
+                ],
+            )
+        )
 
         # Swap the relationship
         for rel in target_event.relationships:
@@ -350,7 +356,7 @@ class SwappedOrderStrategy(DeviationStrategy):
         return DeviationSpec(
             run_id=run_id,
             deviation_type=self.deviation_type,
-            description=f"Swapped order of steps at positions {idx} and {idx+1}",
+            description=f"Swapped order of steps at positions {idx} and {idx + 1}",
         )
 
 
@@ -376,9 +382,9 @@ class WrongToolStrategy(DeviationStrategy):
                 for obj in log.objects:
                     if obj.id == tool_obj_id:
                         # Change to a wrong tool
-                        wrong_tool = rng.choice([
-                            ToolKind.DATABASE_QUERY, ToolKind.API_CALL, ToolKind.VECTOR_SEARCH
-                        ])
+                        wrong_tool = rng.choice(
+                            [ToolKind.DATABASE_QUERY, ToolKind.API_CALL, ToolKind.VECTOR_SEARCH]
+                        )
                         for attr in obj.attributes:
                             if attr.name == "tool_name":
                                 attr.value = wrong_tool.value
@@ -432,7 +438,7 @@ class RepeatedActivityStrategy(DeviationStrategy):
 
         # Create retry_started event
         retry_evt = OcelEvent(
-            id=f"{run_id}-dev-retry-{rng.randint(1000,9999)}",
+            id=f"{run_id}-dev-retry-{rng.randint(1000, 9999)}",
             type="retry_started",
             time=base_time,
             attributes=[
@@ -449,16 +455,18 @@ class RepeatedActivityStrategy(DeviationStrategy):
         log.events.insert(target_idx + 1, retry_evt)
 
         # Create the retry invocation object
-        log.add_object(OcelObject(
-            id=retry_inv_id,
-            type="agent_invocation",
-            attributes=[
-                OcelObjectAttribute(name="status", value="completed", time=base_time),
-                OcelObjectAttribute(name="input_tokens", value="300", time=base_time),
-                OcelObjectAttribute(name="output_tokens", value="150", time=base_time),
-                OcelObjectAttribute(name="cost_usd", value="0.002", time=base_time),
-            ],
-        ))
+        log.add_object(
+            OcelObject(
+                id=retry_inv_id,
+                type="agent_invocation",
+                attributes=[
+                    OcelObjectAttribute(name="status", value="completed", time=base_time),
+                    OcelObjectAttribute(name="input_tokens", value="300", time=base_time),
+                    OcelObjectAttribute(name="output_tokens", value="150", time=base_time),
+                    OcelObjectAttribute(name="cost_usd", value="0.002", time=base_time),
+                ],
+            )
+        )
 
         _mark_run_nonconformant(log, run_id)
 
@@ -509,7 +517,7 @@ class TimeoutStrategy(DeviationStrategy):
                     max_seq = max(max_seq, int(attr.value))
 
         error_evt = OcelEvent(
-            id=f"{run_id}-dev-timeout-{rng.randint(1000,9999)}",
+            id=f"{run_id}-dev-timeout-{rng.randint(1000, 9999)}",
             type="error_occurred",
             time=base_time,
             attributes=[
@@ -521,7 +529,8 @@ class TimeoutStrategy(DeviationStrategy):
             ],
             relationships=[
                 OcelRelationship(objectId=run_id, qualifier="part_of"),
-                OcelRelationship(objectId=invocation_id, qualifier="failed") if invocation_id
+                OcelRelationship(objectId=invocation_id, qualifier="failed")
+                if invocation_id
                 else OcelRelationship(objectId=run_id, qualifier="part_of"),
             ],
         )
@@ -567,16 +576,18 @@ class WrongRoutingStrategy(DeviationStrategy):
         wrong_role = rng.choice(all_roles)
         wrong_agent_id = f"agent-{wrong_role.value}"
 
-        log.add_object(OcelObject(
-            id=wrong_agent_id,
-            type="agent",
-            attributes=[
-                OcelObjectAttribute(name="role", value=wrong_role.value, time=target.time),
-                OcelObjectAttribute(
-                    name="model_name", value=LLMModel.GPT4O.value, time=target.time
-                ),
-            ],
-        ))
+        log.add_object(
+            OcelObject(
+                id=wrong_agent_id,
+                type="agent",
+                attributes=[
+                    OcelObjectAttribute(name="role", value=wrong_role.value, time=target.time),
+                    OcelObjectAttribute(
+                        name="model_name", value=LLMModel.GPT4O.value, time=target.time
+                    ),
+                ],
+            )
+        )
 
         max_seq = 0
         for e in _find_events_for_run(log, run_id):
@@ -585,7 +596,7 @@ class WrongRoutingStrategy(DeviationStrategy):
                     max_seq = max(max_seq, int(attr.value))
 
         routing_evt = OcelEvent(
-            id=f"{run_id}-dev-routing-{rng.randint(1000,9999)}",
+            id=f"{run_id}-dev-routing-{rng.randint(1000, 9999)}",
             type="routing_decided",
             time=target.time - timedelta(milliseconds=rng.randint(10, 50)),
             attributes=[
@@ -672,23 +683,25 @@ class ExtraLLMCallStrategy(DeviationStrategy):
         base_time = target.time + timedelta(milliseconds=rng.randint(20, 100))
         llm_attrs = generate_llm_attributes(rng, LLMModel.GPT4O_MINI)
 
-        extra_llm_id = f"{run_id}-dev-llm-{rng.randint(1000,9999)}"
-        log.add_object(OcelObject(
-            id=extra_llm_id,
-            type="llm_call",
-            attributes=[
-                OcelObjectAttribute(name="model", value=llm_attrs.model, time=base_time),
-                OcelObjectAttribute(
-                    name="input_tokens", value=str(llm_attrs.input_tokens), time=base_time
-                ),
-                OcelObjectAttribute(
-                    name="output_tokens", value=str(llm_attrs.output_tokens), time=base_time
-                ),
-                OcelObjectAttribute(
-                    name="latency_ms", value=str(llm_attrs.latency_ms), time=base_time
-                ),
-            ],
-        ))
+        extra_llm_id = f"{run_id}-dev-llm-{rng.randint(1000, 9999)}"
+        log.add_object(
+            OcelObject(
+                id=extra_llm_id,
+                type="llm_call",
+                attributes=[
+                    OcelObjectAttribute(name="model", value=llm_attrs.model, time=base_time),
+                    OcelObjectAttribute(
+                        name="input_tokens", value=str(llm_attrs.input_tokens), time=base_time
+                    ),
+                    OcelObjectAttribute(
+                        name="output_tokens", value=str(llm_attrs.output_tokens), time=base_time
+                    ),
+                    OcelObjectAttribute(
+                        name="latency_ms", value=str(llm_attrs.latency_ms), time=base_time
+                    ),
+                ],
+            )
+        )
 
         max_seq = 0
         for e in _find_events_for_run(log, run_id):
