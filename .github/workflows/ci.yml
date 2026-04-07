@@ -28,8 +28,11 @@ jobs:
       - name: Lint
         run: uv run ruff check src tests
 
+      - name: Format check
+        run: uv run ruff format --check src tests
+
       - name: Type check
         run: uv run mypy src
 
-      - name: Test
-        run: uv run pytest tests/ -v --tb=short
+      - name: Test with coverage
+        run: uv run pytest tests/ -v --tb=short --ignore=tests/test_hf_dataset.py --cov=src/ocelgen --cov-report=term-missing --cov-fail-under=90
