@@ -1,6 +1,6 @@
 [project]
 name = "open-agent-traces"
-version = "0.2.0rc2"
+version = "0.2.0"
 description = "Generate realistic multi-agent workflow traces with LLM-enriched content, semantic validation, and PM4Py compatibility"
 readme = "README.md"
 authors = [
