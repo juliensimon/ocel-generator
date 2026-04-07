@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from importlib import resources
 from pathlib import Path
 from typing import Any
 
@@ -10,11 +11,9 @@ import jsonschema
 
 
 def _load_schema() -> dict[str, Any]:
-    """Load the vendored OCEL 2.0 JSON schema."""
-    base = Path(__file__).resolve().parent.parent.parent.parent
-    schema_path = base / "schemas" / "ocel20-schema-json.json"
-    with open(schema_path, encoding="utf-8") as f:
-        result: dict[str, Any] = json.load(f)
+    """Load the vendored OCEL 2.0 JSON schema from the package."""
+    schema_file = resources.files("ocelgen.validation").joinpath("ocel20-schema-json.json")
+    result: dict[str, Any] = json.loads(schema_file.read_text(encoding="utf-8"))
     return result
 
 

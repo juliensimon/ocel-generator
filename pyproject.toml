@@ -1,6 +1,6 @@
 [project]
 name = "open-agent-traces"
-version = "0.2.0rc1"
+version = "0.2.0rc2"
 description = "Mock OCEL 2.0 event log generator for LangChain multi-agent runs"
 readme = "README.md"
 authors = [
