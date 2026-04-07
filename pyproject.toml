@@ -1,20 +1,21 @@
 [project]
 name = "open-agent-traces"
 version = "0.2.0rc2"
-description = "Mock OCEL 2.0 event log generator for LangChain multi-agent runs"
+description = "Generate realistic multi-agent workflow traces with LLM-enriched content, semantic validation, and PM4Py compatibility"
 readme = "README.md"
 authors = [
-    { name = "Julien Simon", email = "julien@arcee.ai" }
+    { name = "Julien Simon", email = "julien@julien.org" }
 ]
 requires-python = ">=3.11"
 license = "MIT"
 keywords = [
-    "ocel", "process-mining", "agent-traces", "multi-agent",
-    "langchain", "synthetic-data", "observability", "anomaly-detection",
-    "llm", "ai-agents",
+    "ocel", "ocel2", "process-mining", "agent-traces", "multi-agent",
+    "synthetic-data", "observability", "anomaly-detection",
+    "llm", "ai-agents", "workflow-traces", "conformance-checking",
+    "pm4py", "tool-use",
 ]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",

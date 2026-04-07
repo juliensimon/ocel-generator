@@ -5,15 +5,21 @@ Generate your first synthetic agent traces dataset in under 5 minutes.
 ## Prerequisites
 
 - Python 3.11+
-- [uv](https://docs.astral.sh/uv/) (recommended) or pip
-- An [OpenRouter](https://openrouter.ai) API key (for LLM enrichment)
+- An [OpenRouter](https://openrouter.ai) API key (for LLM enrichment — optional for structural generation)
 
 ## Installation
 
 ```bash
+pip install open-agent-traces
+```
+
+For development (with linting, testing, and pre-commit hooks):
+
+```bash
 git clone https://github.com/juliensimon/ocel-generator.git
 cd ocel-generator
-uv sync
+uv sync --extra dev
+uv run pre-commit install
 ```
 
 ## Step 1: Generate structural traces

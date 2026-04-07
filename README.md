@@ -1,6 +1,6 @@
 # ocelgen — Open Agent Traces Dataset Generator
 
-Generate realistic multi-agent workflow trace datasets with LLM-enriched content. Built for the AI agent ecosystem.
+Generate realistic multi-agent workflow trace datasets with LLM-enriched content, semantic validation, and PM4Py compatibility. Built for the AI agent ecosystem.
 
 [![Dataset on HF](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-open--agent--traces-yellow)](https://huggingface.co/datasets/juliensimon/open-agent-traces)
 [![PyPI](https://img.shields.io/pypi/v/open-agent-traces)](https://pypi.org/project/open-agent-traces/)
@@ -8,7 +8,7 @@ Generate realistic multi-agent workflow trace datasets with LLM-enriched content
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://python.org)
 [![OCEL 2.0](https://img.shields.io/badge/OCEL-2.0-orange.svg)](https://www.ocel-standard.org/)
-[![OpenAI Compatible](https://img.shields.io/badge/API-OpenAI%20Compatible-lightgrey.svg)](docs/user-guide.md#model-and-endpoint-configuration)
+[![OpenAI Compatible](https://img.shields.io/badge/API-OpenAI%20Compatible-lightgrey.svg)](docs/user-guide.md#enrichment-details)
 
 ![Parallel workflow trace — market research domain](docs/parallel-workflow-example.png)
 
@@ -24,20 +24,14 @@ ocelgen generates **structurally valid, semantically rich** agent traces that lo
 - **10 enterprise domains** — customer support, code review, incident response, financial analysis, and 6 more (plus custom domains via YAML)
 - **3 workflow patterns** — sequential, supervisor/worker, parallel fan-out/fan-in
 - **Labeled deviations** — 10 types of anomalies (wrong tools, skipped steps, timeouts) with ground-truth annotations
-- **OCEL 2.0 standard** — compatible with process mining tools
-- **Any LLM backend** — OpenRouter, OpenAI, Anthropic, local models via OpenAI-compatible API
+- **Semantic validation** — referential integrity, temporal ordering, type attribute checks, and workflow conformance beyond JSON schema
+- **OCEL 2.0 standard** — validated with [PM4Py](https://pm4py.fit.fraunhofer.de/) across all 10 domains
+- **Any LLM backend** — OpenRouter, OpenAI, Anthropic, local models via `--base-url`
 
 ## Quick start
 
 ```bash
 pip install open-agent-traces
-```
-
-### Development setup
-
-```bash
-git clone https://github.com/juliensimon/ocel-generator.git && cd ocel-generator
-uv sync
 ```
 
 ### LLM setup
@@ -53,19 +47,15 @@ ocelgen enrich output.jsonocel -d customer-support-triage --model anthropic/clau
 
 **Local (llama.cpp, Ollama, vLLM, etc.)**
 ```bash
-# Example: start llama.cpp with auto-download from Hugging Face
-llama-server -hfr unsloth/Qwen3-30B-A3B-GGUF:Q6_K -ngl 99 -c 4096
-
 # Point ocelgen at the local endpoint (no API key needed)
 ocelgen enrich output.jsonocel -d customer-support-triage \
-  --model unsloth/Qwen3-30B-A3B-GGUF:Q6_K \
-  --base-url http://localhost:8080/v1
+  --model local-model --base-url http://localhost:8080/v1
 ```
 
 ### Generate and enrich
 
 ```bash
-# Generate traces
+# Generate structural traces
 ocelgen generate --pattern sequential --runs 50 --noise 0.2
 
 # Enrich with LLM-generated content
@@ -76,6 +66,14 @@ ocelgen pipeline --domain customer-support-triage --namespace your-hf-username
 
 # Use custom domains defined in YAML
 ocelgen pipeline --domain my-domain --config domains.yaml --namespace your-hf-username
+```
+
+### Development setup
+
+```bash
+git clone https://github.com/juliensimon/ocel-generator.git && cd ocel-generator
+uv sync --extra dev
+uv run pre-commit install
 ```
 
 ## Use the pre-built dataset
@@ -93,14 +91,6 @@ for event in ds["train"]:
 ```
 
 10 domains available: `customer-support-triage` · `code-review-pipeline` · `market-research` · `legal-document-analysis` · `data-pipeline-debugging` · `content-generation` · `financial-analysis` · `incident-response` · `academic-paper-review` · `ecommerce-product-enrichment`
-
-## Who is this for?
-
-- **Agent observability teams** — build dashboards with realistic trace data (timestamps, token counts, costs)
-- **ML researchers** — train anomaly detectors on labeled conformant vs deviant traces
-- **Process mining researchers** — apply OCEL 2.0 conformance checking to agent workflows
-- **Agent framework developers** — test LangGraph, CrewAI, AutoGen, Smolagents against realistic traces
-- **Evaluation teams** — benchmark agent reasoning quality across domains and architectures
 
 ## Validate traces
 
@@ -133,6 +123,14 @@ import pm4py
 ocel = pm4py.read.read_ocel2_json("output.jsonocel")
 ```
 
+## Who is this for?
+
+- **Agent observability teams** — build dashboards with realistic trace data (timestamps, token counts, costs)
+- **ML researchers** — train anomaly detectors on labeled conformant vs deviant traces
+- **Process mining researchers** — apply OCEL 2.0 conformance checking to agent workflows
+- **Agent framework developers** — test LangGraph, CrewAI, AutoGen, Smolagents against realistic traces
+- **Evaluation teams** — benchmark agent reasoning quality across domains and architectures
+
 ## Examples
 
 The [`examples/`](examples/) folder contains runnable scripts:
@@ -148,8 +146,8 @@ The [`examples/`](examples/) folder contains runnable scripts:
 ## Documentation
 
 - **[Quick Start](docs/quickstart.md)** — first dataset in 5 minutes
-- **[User Guide](docs/user-guide.md)** — CLI reference, patterns, domains, custom YAML config, model configuration, validation
-- **[Dataset on Hugging Face](https://huggingface.co/datasets/juliensimon/open-agent-traces)** — 17,000+ events, ready to use
+- **[User Guide](docs/user-guide.md)** — CLI reference, patterns, domains, custom YAML config, validation, PM4Py
+- **[Dataset on Hugging Face](https://huggingface.co/datasets/juliensimon/open-agent-traces)** — 17,000+ events across 10 domains, ready to use
 
 ## License
 
