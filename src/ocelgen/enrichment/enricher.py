@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import random
 from datetime import timedelta
 
@@ -12,6 +13,8 @@ from ocelgen.enrichment.client import EnrichmentResponse, LLMClient
 from ocelgen.enrichment.prompts import build_enrichment_prompt
 from ocelgen.models.ocel import OcelLog, OcelObjectAttribute
 from ocelgen.scenarios.domain import DomainScenario
+
+logger = logging.getLogger(__name__)
 
 # Cost per 1K tokens (input, output) by model — mirrors generation/attributes.py
 _COST_PER_1K: dict[str, tuple[float, float]] = {
@@ -279,7 +282,8 @@ def _get_object(log: OcelLog, obj_id: str):
     return None
 
 
-def _patch_attribute(obj, name: str, value) -> None:
+def _patch_attribute(obj, name: str, value) -> None:  # type: ignore[no-untyped-def]
+    """Set an attribute on an object, updating existing or appending new."""
     # Coerce non-string values (LLM may return dicts/lists)
     if not isinstance(value, str):
         value = json.dumps(value) if value is not None else ""
@@ -287,9 +291,16 @@ def _patch_attribute(obj, name: str, value) -> None:
         if attr.name == name:
             attr.value = value
             return
-    ts = obj.attributes[0].time if obj.attributes else None
-    if ts:
-        obj.attributes.append(OcelObjectAttribute(name=name, value=value, time=ts))
+    # Append new attribute — need a timestamp from an existing attribute
+    if not obj.attributes:
+        logger.debug(
+            "Cannot add attribute '%s' to object '%s': no existing attributes for timestamp",
+            name,
+            obj.id,
+        )
+        return
+    ts = obj.attributes[0].time
+    obj.attributes.append(OcelObjectAttribute(name=name, value=value, time=ts))
 
 
 def _get_tool_names_for_step(log: OcelLog, step: dict) -> list[str]:
@@ -347,9 +358,14 @@ def enrich_log(
     progress: Progress | None = None,
     progress_task: TaskID | None = None,
 ) -> None:
-    """Enrich an OcelLog in-place with LLM-generated content."""
+    """Enrich an OcelLog in-place with LLM-generated content.
+
+    Returns the number of steps that failed enrichment (0 if all succeeded).
+    """
     if client is None:
         client = LLMClient()
+
+    failed_steps = 0
 
     run_ids = sorted({o.id for o in log.objects if o.type == "run"})
 
@@ -361,7 +377,7 @@ def enrich_log(
                     pattern_desc = attr.value
             break
 
-    # Improvement 2: Expand queries if we have fewer than needed
+    # Expand queries if we have fewer than needed
     expanded_queries: list[str] | None = None
     if len(scenario.user_queries) < len(run_ids):
         try:
@@ -370,7 +386,12 @@ def enrich_log(
                 domain_description=scenario.description,
                 count=len(run_ids),
             )
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "Query expansion failed, falling back to cycling %d seed queries: %s",
+                len(scenario.user_queries),
+                exc,
+            )
             expanded_queries = None
 
     for run_idx, run_id in enumerate(run_ids):
@@ -449,7 +470,15 @@ def enrich_log(
                     expected_llm_calls=step["expected_llm_calls"],
                     expected_tool_calls=step["expected_tool_calls"],
                 )
-            except Exception:
+            except Exception as exc:
+                failed_steps += 1
+                logger.warning(
+                    "Enrichment failed for %s step %d (%s): %s",
+                    run_id,
+                    step_idx,
+                    role,
+                    exc,
+                )
                 continue
 
             inv_obj = _get_object(log, step["invocation_id"])
@@ -484,8 +513,13 @@ def enrich_log(
             previous_output = resp.output_to_next_agent
             step_outputs[role] = resp.output_to_next_agent
 
-        # Improvement 4: Rewrite timestamps after enriching all steps in this run
+        # Rewrite timestamps after enriching all steps in this run
         _rewrite_timestamps(log, run_id)
 
         if progress and progress_task is not None:
             progress.advance(progress_task)
+
+    if failed_steps:
+        logger.warning("Enrichment completed with %d failed step(s)", failed_steps)
+
+    return failed_steps

@@ -99,10 +99,11 @@ jobs:
 
       - name: Verify package contents
         run: |
-          pip install dist/*.whl
-          python -c "import ocelgen; print('ocelgen imported successfully')"
-          python -c "from ocelgen.validation import validate_referential_integrity; print('validators OK')"
-          ocelgen --help
+          uv venv /tmp/verify-env
+          VIRTUAL_ENV=/tmp/verify-env uv pip install dist/*.whl
+          /tmp/verify-env/bin/python -c "import ocelgen; print('ocelgen imported successfully')"
+          /tmp/verify-env/bin/python -c "from ocelgen.validation import validate_referential_integrity; print('validators OK')"
+          /tmp/verify-env/bin/ocelgen --help
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -127,7 +128,8 @@ jobs:
           path: dist/
 
       - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        # v1.12.4 — pinned to SHA for supply chain security
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
         with:
           repository-url: https://test.pypi.org/legacy/
 
@@ -147,7 +149,8 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        # v1.12.4 — pinned to SHA for supply chain security
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
 
   # ── 5. Create GitHub Release ─────────────────────────────────────────
   github-release:
@@ -184,53 +187,50 @@ jobs:
 
           echo "Generating changelog for ${RANGE}"
 
-          # Group commits by type
+          # Get subject lines only (no body) to avoid false grep matches
+          git log "$RANGE" --pretty=format:"%s" --no-merges > /tmp/subjects.txt
+
+          # Group commits by conventional commit prefix (subject line only)
           {
             echo "## What's Changed"
             echo ""
 
-            # Features
-            FEATS=$(git log "$RANGE" --pretty=format:"- %s" --grep="^feat" --no-merges 2>/dev/null || true)
+            FEATS=$(grep -E "^feat" /tmp/subjects.txt | sed 's/^/- /' || true)
             if [ -n "$FEATS" ]; then
               echo "### Features"
               echo "$FEATS"
               echo ""
             fi
 
-            # Fixes
-            FIXES=$(git log "$RANGE" --pretty=format:"- %s" --grep="^fix" --no-merges 2>/dev/null || true)
+            FIXES=$(grep -E "^fix" /tmp/subjects.txt | sed 's/^/- /' || true)
             if [ -n "$FIXES" ]; then
               echo "### Bug Fixes"
               echo "$FIXES"
               echo ""
             fi
 
-            # Tests
-            TESTS=$(git log "$RANGE" --pretty=format:"- %s" --grep="^test" --no-merges 2>/dev/null || true)
+            TESTS=$(grep -E "^test" /tmp/subjects.txt | sed 's/^/- /' || true)
             if [ -n "$TESTS" ]; then
               echo "### Tests"
               echo "$TESTS"
               echo ""
             fi
 
-            # Docs
-            DOCS=$(git log "$RANGE" --pretty=format:"- %s" --grep="^docs" --no-merges 2>/dev/null || true)
+            DOCS=$(grep -E "^docs" /tmp/subjects.txt | sed 's/^/- /' || true)
             if [ -n "$DOCS" ]; then
               echo "### Documentation"
               echo "$DOCS"
               echo ""
             fi
 
-            # Chores
-            CHORES=$(git log "$RANGE" --pretty=format:"- %s" --grep="^chore" --no-merges 2>/dev/null || true)
+            CHORES=$(grep -E "^chore" /tmp/subjects.txt | sed 's/^/- /' || true)
             if [ -n "$CHORES" ]; then
               echo "### Maintenance"
               echo "$CHORES"
               echo ""
             fi
 
-            # Everything else
-            OTHER=$(git log "$RANGE" --pretty=format:"- %s" --no-merges --invert-grep --grep="^feat" --grep="^fix" --grep="^test" --grep="^docs" --grep="^chore" 2>/dev/null || true)
+            OTHER=$(grep -v -E "^(feat|fix|test|docs|chore)" /tmp/subjects.txt | sed 's/^/- /' || true)
             if [ -n "$OTHER" ]; then
               echo "### Other"
               echo "$OTHER"
@@ -250,7 +250,8 @@ jobs:
         env:
           VERSION: ${{ needs.preflight.outputs.version }}
           IS_PRERELEASE: ${{ needs.preflight.outputs.is_prerelease }}
-        uses: softprops/action-gh-release@v2
+        # v2.3.2 — pinned to SHA for supply chain security
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe
         with:
           name: "v${{ needs.preflight.outputs.version }}"
           body_path: /tmp/changelog.md

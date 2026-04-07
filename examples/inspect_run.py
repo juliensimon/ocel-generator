@@ -19,7 +19,10 @@ def main() -> None:
     run_id = "run-0000"
 
     # --- Run metadata ---
-    run_obj = next(o for o in log.objects if o.id == run_id)
+    run_obj = next((o for o in log.objects if o.id == run_id), None)
+    if run_obj is None:
+        print(f"Run '{run_id}' not found in log")
+        return
     attrs = {a.name: a.value for a in run_obj.attributes}
     print(f"Run: {run_id}")
     print(f"  Pattern:     {attrs.get('pattern_type')}")

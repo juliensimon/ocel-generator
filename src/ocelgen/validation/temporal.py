@@ -12,14 +12,6 @@ from datetime import datetime
 
 from ocelgen.models.ocel import OcelEvent, OcelLog
 
-# Event pairs where the first must occur before the second
-_CAUSAL_PAIRS: list[tuple[str, str, str]] = [
-    # (start_event_type, end_event_type, shared_qualifier)
-    ("llm_request_sent", "llm_response_received", "started/completed"),
-    ("tool_called", "tool_returned", "started/completed"),
-    ("agent_invoked", "agent_completed", "started/completed"),
-]
-
 
 def validate_temporal_order(log: OcelLog) -> list[str]:
     """Validate chronological and causal ordering of events within each run.
@@ -30,6 +22,7 @@ def validate_temporal_order(log: OcelLog) -> list[str]:
 
     # Group events by run_id
     events_by_run: dict[str, list[OcelEvent]] = {}
+    orphaned_count = 0
     for event in log.events:
         run_id = ""
         for attr in event.attributes:
@@ -38,6 +31,11 @@ def validate_temporal_order(log: OcelLog) -> list[str]:
                 break
         if run_id:
             events_by_run.setdefault(run_id, []).append(event)
+        else:
+            orphaned_count += 1
+
+    if orphaned_count:
+        errors.append(f"{orphaned_count} event(s) have no 'run_id' attribute")
 
     for run_id, events in events_by_run.items():
         # Sort by time for chronological checks
@@ -64,7 +62,10 @@ def validate_temporal_order(log: OcelLog) -> list[str]:
                     try:
                         seq_numbers.append(int(attr.value))
                     except ValueError:
-                        pass
+                        errors.append(
+                            f"Run '{run_id}': event '{event.id}' has "
+                            f"non-integer sequence_number '{attr.value}'"
+                        )
         for i in range(1, len(seq_numbers)):
             if seq_numbers[i] < seq_numbers[i - 1]:
                 errors.append(
@@ -72,14 +73,15 @@ def validate_temporal_order(log: OcelLog) -> list[str]:
                     f"(seq {seq_numbers[i]} follows {seq_numbers[i - 1]})"
                 )
 
-        # Check causal pairs via shared object relationships
+        # Check causal pairs: "started" qualifier must precede "completed"
+        # for the same object (single start/complete cycle per object assumed)
         _check_causal_pairs(run_id, sorted_events, errors)
 
     return errors
 
 
 def _check_causal_pairs(run_id: str, events: list[OcelEvent], errors: list[str]) -> None:
-    """Check that paired events (request/response) respect causal order."""
+    """Check that 'started' events precede 'completed' events for each object."""
     # Map: objectId -> {qualifier: [(event_id, time)]}
     object_events: dict[str, dict[str, list[tuple[str, datetime]]]] = {}
 
@@ -93,12 +95,10 @@ def _check_causal_pairs(run_id: str, events: list[OcelEvent], errors: list[str])
                 object_events[key][qual] = []
             object_events[key][qual].append((event.id, event.time))
 
-    # For each object, check that "started" events precede "completed" events
     for obj_id, quals in object_events.items():
         started = quals.get("started", [])
         completed = quals.get("completed", [])
         if started and completed:
-            # The earliest "started" should be before the earliest "completed"
             earliest_start = min(t for _, t in started)
             earliest_complete = min(t for _, t in completed)
             if earliest_complete < earliest_start:

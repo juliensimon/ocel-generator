@@ -102,7 +102,8 @@ def validate_workflow_conformance(log: OcelLog, template: WorkflowTemplate) -> l
             key=lambda e: e.time,
         )
 
-        # Resolve agent roles and step IDs from events
+        # Resolve agent roles from object attributes (not ID parsing)
+        obj_index = {o.id: o for o in log.objects}
         actual_roles: list[str] = []
         actual_step_ids: list[str] = []
         for event in invoked_events:
@@ -110,10 +111,20 @@ def validate_workflow_conformance(log: OcelLog, template: WorkflowTemplate) -> l
             step_id = ""
             for rel in event.relationships:
                 if rel.qualifier == "invoked":
-                    role = rel.objectId.replace("agent-", "")
-            for attr in event.attributes:
-                if attr.name == "step_id":
-                    step_id = attr.value
+                    agent_obj = obj_index.get(rel.objectId)
+                    if agent_obj:
+                        for obj_attr in agent_obj.attributes:
+                            if obj_attr.name == "role":
+                                role = obj_attr.value
+                                break
+                    if not role:
+                        errors.append(
+                            f"Run '{run_id}': agent_invoked event '{event.id}' "
+                            f"references object '{rel.objectId}' with no 'role' attribute"
+                        )
+            for evt_attr in event.attributes:
+                if evt_attr.name == "step_id":
+                    step_id = evt_attr.value
             actual_roles.append(role)
             actual_step_ids.append(step_id)
 
@@ -169,9 +180,9 @@ def validate_workflow_conformance(log: OcelLog, template: WorkflowTemplate) -> l
                 continue
             is_this_run = any(a.name == "run_id" and a.value == run_id for a in event.attributes)
             if is_this_run:
-                for attr in event.attributes:
-                    if attr.name == "step_id":
-                        completed_step_ids.add(attr.value)
+                for ea in event.attributes:
+                    if ea.name == "step_id":
+                        completed_step_ids.add(ea.value)
 
         for step in expected_steps:
             if step.id not in completed_step_ids:

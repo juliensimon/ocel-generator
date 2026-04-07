@@ -243,7 +243,7 @@ class TestEnrichWithDeviations:
         assert mock_client.generate.call_count > 0
 
     def test_enrich_handles_llm_failure_gracefully(self) -> None:
-        """Enricher should continue when LLM calls fail for individual steps."""
+        """Enricher should continue when LLM calls fail, returning failure count."""
         result = generate("sequential", num_runs=2, noise_rate=0.0, seed=42)
         scenario = _make_scenario(runs=2)
 
@@ -259,11 +259,11 @@ class TestEnrichWithDeviations:
         ]
         mock_client.generate_queries.return_value = ["q1", "q2"]
 
-        # Should not raise
-        enrich_log(result.log, scenario, client=mock_client)
+        failed = enrich_log(result.log, scenario, client=mock_client)
+        assert failed >= 1
 
     def test_enrich_query_expansion_failure_falls_back(self) -> None:
-        """If generate_queries fails, enricher falls back to cycling queries."""
+        """If generate_queries fails, enricher logs warning and falls back to cycling."""
         result = generate("sequential", num_runs=5, noise_rate=0.0, seed=42)
         scenario = DomainScenario(
             name="test",

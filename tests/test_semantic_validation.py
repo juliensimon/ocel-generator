@@ -273,6 +273,53 @@ class TestTemporalOrder:
             for i in range(1, len(seq_numbers)):
                 assert seq_numbers[i] >= seq_numbers[i - 1]
 
+    def test_detects_completed_before_started(self) -> None:
+        """Inject a causal violation: swap started/completed timestamps."""
+        result = _generate("sequential", runs=1, noise=0.0)
+        log = result.log
+
+        # Find a pair of started/completed events for the same object
+        for event in log.events:
+            if event.type == "llm_response_received":
+                # This has qualifier "completed" — swap its time with the request
+                for req in log.events:
+                    if req.type == "llm_request_sent":
+                        # Check they share the same object
+                        req_obj = {
+                            r.objectId for r in req.relationships if r.qualifier == "started"
+                        }
+                        comp_obj = {
+                            r.objectId for r in event.relationships if r.qualifier == "completed"
+                        }
+                        if req_obj & comp_obj:
+                            # Swap times so completed is before started
+                            event.time, req.time = req.time, event.time
+                            errors = validate_temporal_order(log)
+                            causal_errors = [
+                                e for e in errors if "completed" in e and "before" in e
+                            ]
+                            assert len(causal_errors) > 0, "Should detect completed before started"
+                            return
+        # If we get here, the test data didn't have the expected structure
+        assert False, "Could not find a started/completed pair to swap"
+
+    def test_detects_orphaned_events(self) -> None:
+        """Events without run_id should be reported."""
+        result = _generate("sequential", runs=1, noise=0.0)
+        log = result.log
+
+        # Add an event with no run_id
+        log.events.append(
+            OcelEvent(
+                id="orphan-evt",
+                type="run_started",
+                time=datetime(2025, 1, 1, tzinfo=UTC),
+                attributes=[],  # no run_id
+            )
+        )
+        errors = validate_temporal_order(log)
+        assert any("no 'run_id'" in e for e in errors)
+
     def test_deviations_may_alter_ordering(self) -> None:
         """Deviation strategies (e.g., SwappedOrder) intentionally reorder
         events. We verify that conformant runs still pass causal checks,
@@ -368,6 +415,53 @@ class TestWorkflowConformance:
                 f"Step '{step.id}' ({step.agent_role.value}) expected 1 "
                 f"agent_invoked event, got {len(step_events)}"
             )
+
+    # --- Negative tests: detect violations ---
+
+    def test_detects_wrong_step_order(self) -> None:
+        """Inject wrong agent ordering into a conformant run."""
+        result = _generate("sequential", runs=1, noise=0.0)
+        log = result.log
+
+        # Swap the agent relationships on the first two agent_invoked events
+        invoked = [e for e in log.events if e.type == "agent_invoked"]
+        if len(invoked) >= 2:
+            # Swap the "invoked" relationship objectIds
+            for rel in invoked[0].relationships:
+                if rel.qualifier == "invoked":
+                    old_id = rel.objectId
+                    break
+            for rel in invoked[1].relationships:
+                if rel.qualifier == "invoked":
+                    rel.objectId, old_id = old_id, rel.objectId
+            for rel in invoked[0].relationships:
+                if rel.qualifier == "invoked":
+                    rel.objectId = old_id
+
+        errors = validate_workflow_conformance(log, result.template)
+        assert any("expected role" in e for e in errors), (
+            f"Should detect wrong step order, got: {errors}"
+        )
+
+    def test_detects_missing_step(self) -> None:
+        """Remove an agent_invoked event from a conformant run."""
+        result = _generate("sequential", runs=1, noise=0.0)
+        log = result.log
+
+        # Remove the last agent_invoked event for run-0000
+        invoked = [
+            e
+            for e in log.events
+            if e.type == "agent_invoked"
+            and any(a.name == "run_id" and a.value == "run-0000" for a in e.attributes)
+        ]
+        if invoked:
+            log.events.remove(invoked[-1])
+
+        errors = validate_workflow_conformance(log, result.template)
+        assert any("expected" in e and "steps" in e for e in errors), (
+            f"Should detect missing step, got: {errors}"
+        )
 
     def test_deviant_runs_are_correctly_flagged(self) -> None:
         """Code sample: cross-check manifest ground truth vs. event attributes."""

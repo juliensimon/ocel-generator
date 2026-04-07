@@ -175,6 +175,9 @@ def create_or_update_collection(
     repo_ids: list[str],
 ) -> str:
     """Create or update an HF collection with the given dataset repos."""
+    import logging
+
+    logger = logging.getLogger(__name__)
     api = HfApi()
 
     try:
@@ -184,7 +187,8 @@ def create_or_update_collection(
             if col.slug and collection_slug in col.slug:
                 existing = col
                 break
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to list collections for '%s': %s", namespace, exc)
         existing = None
 
     if existing is None:
@@ -202,6 +206,7 @@ def create_or_update_collection(
     else:
         collection_slug_full = existing.slug
 
+    failed_items: list[str] = []
     for repo_id in repo_ids:
         try:
             api.add_collection_item(
@@ -210,7 +215,11 @@ def create_or_update_collection(
                 item_type="dataset",
                 exists_ok=True,
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to add '%s' to collection: %s", repo_id, exc)
+            failed_items.append(repo_id)
+
+    if failed_items:
+        logger.warning("%d/%d items failed to add to collection", len(failed_items), len(repo_ids))
 
     return f"https://huggingface.co/collections/{collection_slug_full}"
