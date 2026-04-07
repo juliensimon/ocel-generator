@@ -109,6 +109,67 @@ ocelgen pipeline --domain hr-onboarding --config my-domains.yaml --namespace you
 
 Custom domains merge with the 10 built-ins. To override a built-in, use the same `name`.
 
+## Step 6: Validate the traces
+
+ocelgen includes semantic validators that go beyond JSON schema:
+
+```python
+from ocelgen.generation.engine import generate
+from ocelgen.validation import (
+    validate_referential_integrity,
+    validate_temporal_order,
+    validate_type_attributes,
+    validate_workflow_conformance,
+)
+
+result = generate("sequential", num_runs=50, noise_rate=0.3, seed=42)
+
+# All references resolve, types are declared, conformant runs match the template
+assert validate_referential_integrity(result.log) == []
+assert validate_type_attributes(result.log) == []
+assert validate_workflow_conformance(result.log, result.template) == []
+```
+
+Or validate a file from the CLI:
+
+```bash
+ocelgen validate output.jsonocel
+```
+
+## Step 7: Load with pm4py (optional)
+
+Install the conformance extra and load traces in the reference OCEL 2.0 library:
+
+```bash
+uv sync --extra conformance
+```
+
+```python
+import pm4py
+
+ocel = pm4py.read.read_ocel2_json("output.jsonocel")
+print(f"Events: {len(ocel.events)}")
+print(f"Objects: {len(ocel.objects)}")
+
+# Event types are in 'ocel:activity' (not 'ocel:type')
+print(ocel.events["ocel:activity"].value_counts())
+```
+
+## Examples
+
+The [`examples/`](../examples/) folder contains runnable scripts showing common workflows:
+
+```bash
+# Run all semantic validators across all patterns
+python examples/validate_traces.py
+
+# Walk a single run's event timeline, LLM calls, tools, costs
+python examples/inspect_run.py
+
+# Download from HF and explore with pm4py
+python examples/explore_with_pm4py.py
+```
+
 ## Next steps
 
 - Read the [User Guide](user-guide.md) for detailed configuration options

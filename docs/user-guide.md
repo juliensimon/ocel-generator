@@ -48,17 +48,22 @@ ocelgen enrich <path> [OPTIONS]
 |--------|---------|-------------|
 | `-d, --domain` | required | Domain scenario name |
 | `-m, --model` | `google/gemini-2.0-flash-001` | LLM model for enrichment |
+| `--base-url` | `https://openrouter.ai/api/v1` | OpenAI-compatible API base URL |
 | `-o, --output` | `enriched-<input>` | Output file path |
 | `-c, --config` | — | YAML file or directory with custom domain definitions |
 
 **Examples:**
 
 ```bash
-# Enrich with default model
+# Enrich with default model (OpenRouter)
 ocelgen enrich output.jsonocel --domain customer-support-triage
 
 # Use a different model
 ocelgen enrich output.jsonocel --domain incident-response --model openai/gpt-4o-mini
+
+# Use a local LLM (no API key needed)
+ocelgen enrich output.jsonocel --domain customer-support-triage \
+  --model local-model --base-url http://localhost:8080/v1
 
 # Custom output path
 ocelgen enrich output.jsonocel --domain code-review-pipeline -o enriched.jsonocel
@@ -81,6 +86,7 @@ ocelgen pipeline [OPTIONS]
 | `--all` | `false` | Process all domains |
 | `-n, --namespace` | required | HF namespace for upload |
 | `-m, --model` | `google/gemini-2.0-flash-001` | LLM model |
+| `--base-url` | `https://openrouter.ai/api/v1` | OpenAI-compatible API base URL |
 | `--skip-upload` | `false` | Generate and enrich without uploading |
 | `-c, --config` | — | YAML file or directory with custom domain definitions |
 
@@ -264,7 +270,7 @@ Deviations are injected into a configurable fraction of runs to create non-confo
 
 ## Enrichment Details
 
-The enrichment pass calls an LLM (via [OpenRouter](https://openrouter.ai)) once per agent step. It:
+The enrichment pass calls an LLM once per agent step via any OpenAI-compatible endpoint (OpenRouter by default, or a local server via `--base-url`). It:
 
 1. **Expands seed queries** — if the domain has fewer seed queries than runs, the LLM generates additional unique queries
 2. **Chains context** — each step's output is passed as context to the next step, producing coherent traces
@@ -326,3 +332,98 @@ configs = [
 ```
 
 See the [dataset page](https://huggingface.co/datasets/juliensimon/open-agent-traces) for full documentation and examples.
+
+## Validation
+
+### CLI validation
+
+```bash
+ocelgen validate output.jsonocel
+```
+
+This checks the file against the OCEL 2.0 JSON schema. For deeper validation, use the Python API.
+
+### Semantic validators
+
+ocelgen includes four semantic validation layers beyond JSON schema:
+
+```python
+from ocelgen.generation.engine import generate
+from ocelgen.validation import (
+    validate_ocel_dict,
+    validate_referential_integrity,
+    validate_temporal_order,
+    validate_type_attributes,
+    validate_workflow_conformance,
+)
+from ocelgen.export.ocel_json import ocel_log_to_dict
+
+result = generate("sequential", num_runs=50, noise_rate=0.3, seed=42)
+log = result.log
+
+# 1. JSON Schema — structural compliance
+errors = validate_ocel_dict(ocel_log_to_dict(log))
+
+# 2. Referential integrity — every relationship points to an existing object
+errors = validate_referential_integrity(log)
+
+# 3. Type attributes — every attribute is declared in its type schema
+errors = validate_type_attributes(log)
+
+# 4. Temporal ordering — events respect causal order within each run
+errors = validate_temporal_order(log)
+
+# 5. Workflow conformance — conformant runs follow the normative template
+errors = validate_workflow_conformance(log, result.template)
+```
+
+Each validator returns a list of error messages (empty if valid).
+
+| Validator | What it checks |
+|-----------|---------------|
+| `validate_ocel_dict` | OCEL 2.0 JSON schema compliance (Draft 7) |
+| `validate_referential_integrity` | Dangling references, duplicate IDs, undeclared types |
+| `validate_type_attributes` | Attributes match their eventType/objectType declarations |
+| `validate_temporal_order` | run_started first, run_completed last, causal pairs in order |
+| `validate_workflow_conformance` | Conformant runs match template steps (parallel-group aware) |
+
+### PM4Py compatibility
+
+Install the conformance extra to load traces in [pm4py](https://pm4py.fit.fraunhofer.de/) — the reference OCEL 2.0 process mining library:
+
+```bash
+pip install open-agent-traces[conformance]
+```
+
+```python
+import pm4py
+
+ocel = pm4py.read.read_ocel2_json("output.jsonocel")
+print(f"Events: {len(ocel.events)}, Objects: {len(ocel.objects)}")
+
+# Note: pm4py uses 'ocel:activity' for event types (not 'ocel:type')
+print(ocel.events["ocel:activity"].value_counts())
+
+# Object types use 'ocel:type'
+print(ocel.objects["ocel:type"].value_counts())
+
+# Relationships are in ocel.relations
+print(f"Relationships: {len(ocel.relations)}")
+```
+
+## Examples
+
+Runnable scripts in the [`examples/`](../examples/) folder:
+
+| Script | Description |
+|--------|-------------|
+| [`basic_generation.py`](../examples/basic_generation.py) | Generate logs via Python API, inspect results, write files |
+| [`validate_traces.py`](../examples/validate_traces.py) | Run all 5 semantic validators across all 3 patterns |
+| [`inspect_run.py`](../examples/inspect_run.py) | Walk a single run's event timeline, LLM calls, tools, costs, deviations |
+| [`explore_with_pm4py.py`](../examples/explore_with_pm4py.py) | Download from HF, query with pm4py and datasets library |
+| [`conformance_demo.py`](../examples/conformance_demo.py) | Generate and load with pm4py |
+
+```bash
+# Run an example
+python examples/validate_traces.py
+```

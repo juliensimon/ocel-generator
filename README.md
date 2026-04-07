@@ -102,10 +102,53 @@ for event in ds["train"]:
 - **Agent framework developers** — test LangGraph, CrewAI, AutoGen, Smolagents against realistic traces
 - **Evaluation teams** — benchmark agent reasoning quality across domains and architectures
 
+## Validate traces
+
+ocelgen includes semantic validators that go beyond JSON schema — referential integrity, temporal ordering, type attribute declarations, and workflow conformance:
+
+```python
+from ocelgen.generation.engine import generate
+from ocelgen.validation import (
+    validate_referential_integrity,
+    validate_temporal_order,
+    validate_type_attributes,
+    validate_workflow_conformance,
+)
+
+result = generate("sequential", num_runs=50, noise_rate=0.3, seed=42)
+
+assert validate_referential_integrity(result.log) == []
+assert validate_type_attributes(result.log) == []
+assert validate_workflow_conformance(result.log, result.template) == []
+```
+
+With the optional `pm4py` extra, you can also load traces directly in the reference OCEL 2.0 process mining library:
+
+```bash
+pip install open-agent-traces[conformance]
+```
+
+```python
+import pm4py
+ocel = pm4py.read.read_ocel2_json("output.jsonocel")
+```
+
+## Examples
+
+The [`examples/`](examples/) folder contains runnable scripts:
+
+| Script | What it shows |
+|--------|---------------|
+| [`basic_generation.py`](examples/basic_generation.py) | Generate logs via Python API, inspect results, write files |
+| [`validate_traces.py`](examples/validate_traces.py) | Run all 5 semantic validators across all 3 patterns |
+| [`inspect_run.py`](examples/inspect_run.py) | Walk a single run's event timeline, LLM calls, tools, costs |
+| [`explore_with_pm4py.py`](examples/explore_with_pm4py.py) | Download from HF, query with pm4py and datasets library |
+| [`conformance_demo.py`](examples/conformance_demo.py) | Generate and load with pm4py |
+
 ## Documentation
 
 - **[Quick Start](docs/quickstart.md)** — first dataset in 5 minutes
-- **[User Guide](docs/user-guide.md)** — CLI reference, patterns, domains, custom YAML config, model configuration
+- **[User Guide](docs/user-guide.md)** — CLI reference, patterns, domains, custom YAML config, model configuration, validation
 - **[Dataset on Hugging Face](https://huggingface.co/datasets/juliensimon/open-agent-traces)** — 17,000+ events, ready to use
 
 ## License
