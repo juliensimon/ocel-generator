@@ -490,15 +490,19 @@ class TestWorkflowConformance:
 # 4. PM4Py round-trip
 # ===================================================================
 
-import pytest
-
-pm4py = pytest.importorskip("pm4py", reason="pm4py not installed")
-
 from pathlib import Path
+
+import pytest
 
 from ocelgen.export.ocel_json import write_ocel_json
 
+try:
+    import pm4py
+except ImportError:
+    pm4py = None  # type: ignore[assignment]
 
+
+@pytest.mark.skipif(pm4py is None, reason="pm4py not installed")
 class TestPM4PyRoundTrip:
     """Verify logs can be loaded and queried by pm4py — the reference OCEL 2.0 library.
 
