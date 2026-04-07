@@ -87,6 +87,7 @@ ocelgen pipeline [OPTIONS]
 | `-n, --namespace` | required | HF namespace for upload |
 | `-m, --model` | `google/gemini-2.0-flash-001` | LLM model |
 | `--base-url` | `https://openrouter.ai/api/v1` | OpenAI-compatible API base URL |
+| `--collection` | `open-agent-traces` | HF collection slug for grouping datasets |
 | `--skip-upload` | `false` | Generate and enrich without uploading |
 | `-c, --config` | — | YAML file or directory with custom domain definitions |
 
@@ -104,6 +105,10 @@ ocelgen pipeline --domain incident-response --namespace test --skip-upload
 
 # Custom domain from YAML
 ocelgen pipeline --domain my-domain --config domains.yaml --namespace test --skip-upload
+
+# Use a local LLM (no API key needed)
+ocelgen pipeline --domain customer-support-triage --namespace test --skip-upload \
+  --model local-model --base-url http://localhost:8080/v1
 ```
 
 ### `ocelgen validate`
@@ -130,7 +135,7 @@ ocelgen upload <path> [OPTIONS]
 |--------|---------|-------------|
 | `-d, --domain` | required | Domain scenario name |
 | `-n, --namespace` | required | HF namespace |
-| `--collection` | `open-agent-traces` | Collection slug |
+| `--collection` | `open-agent-traces` | HF collection slug for grouping datasets |
 | `-c, --config` | — | YAML file or directory with custom domain definitions |
 
 ### `ocelgen list-domains`
@@ -277,6 +282,30 @@ The enrichment pass calls an LLM once per agent step via any OpenAI-compatible e
 3. **Detects deviations** — deviant steps get modified prompts that tell the LLM to generate failure-reflecting content
 4. **Recalculates metrics** — token counts, latencies, and costs are calibrated to the actual enriched content
 5. **Rewrites timestamps** — event timestamps are adjusted to reflect realistic LLM latencies (1–5s per call)
+
+### Model and endpoint configuration
+
+ocelgen works with any OpenAI-compatible API. Use `--model` and `--base-url` to configure:
+
+**Cloud providers (via OpenRouter — default):**
+```bash
+export OPENAI_API_KEY="your-openrouter-key"
+ocelgen enrich output.jsonocel -d customer-support-triage
+ocelgen enrich output.jsonocel -d customer-support-triage --model openai/gpt-4o
+```
+
+**Direct provider APIs:**
+```bash
+export OPENAI_API_KEY="your-openai-key"
+ocelgen enrich output.jsonocel -d customer-support-triage \
+  --model gpt-4o --base-url https://api.openai.com/v1
+```
+
+**Local models (llama.cpp, Ollama, vLLM — no API key needed):**
+```bash
+ocelgen enrich output.jsonocel -d customer-support-triage \
+  --model local-model --base-url http://localhost:8080/v1
+```
 
 ### Supported models
 
