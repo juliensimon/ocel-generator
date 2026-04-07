@@ -9,6 +9,9 @@ and validate OCEL 2.0 agent traces from Hugging Face.
 
 Requires network access and the conformance extra:
     uv run --extra conformance python -m pytest tests/test_hf_dataset.py -v
+
+Excluded from default test runs. Run explicitly or with:
+    uv run pytest -m network
 """
 
 from __future__ import annotations
@@ -16,6 +19,8 @@ from __future__ import annotations
 import json
 
 import pytest
+
+pytestmark = pytest.mark.network
 
 pm4py = pytest.importorskip(
     "pm4py", reason="pm4py not installed (install with: uv sync --extra conformance)"

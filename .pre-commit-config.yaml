@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: pytest-fast
         name: pytest (fast)
-        entry: uv run python -m pytest tests/ -x -q --tb=short --no-cov --ignore=tests/test_hf_dataset.py -p no:cacheprovider
+        entry: uv run python -m pytest tests/ -x -q --tb=short --no-cov -m "not network" -p no:cacheprovider
         language: system
         pass_filenames: false
         always_run: true

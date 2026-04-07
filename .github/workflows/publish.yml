@@ -82,7 +82,7 @@ jobs:
         run: uv run mypy src
 
       - name: Test with coverage
-        run: uv run pytest tests/ -v --tb=short --ignore=tests/test_hf_dataset.py --cov=src/ocelgen --cov-fail-under=90
+        run: uv run pytest tests/ -v --tb=short -m "not network" --cov=src/ocelgen --cov-fail-under=90
 
   # ── 3. Build and verify the package ──────────────────────────────────
   build:
